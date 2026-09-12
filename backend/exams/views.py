@@ -41,7 +41,7 @@ def throttle(key):
 
 def person(user):
     profile,_=Profile.objects.get_or_create(user=user)
-    return {'id':user.id,'name':user.first_name or user.username,'email':user.email,'is_staff':user.is_staff,'target_band':float(profile.target_band),'language':profile.language}
+    return {'id':user.id,'name':user.get_full_name().strip() or (user.username if '@' not in user.username else ''),'email':user.email,'is_staff':user.is_staff,'target_band':float(profile.target_band),'language':profile.language}
 @endpoint(['GET'],False)
 def health(request):
     from .gemini import configured
@@ -76,7 +76,9 @@ def public_exam(exam):return {'id':exam.id,'title':exam.title,'section':exam.sec
 @endpoint(['GET'])
 def catalog(request):
     profile,_=Profile.objects.get_or_create(user=request.user)
-    return JsonResponse({'exams':[public_exam(e) for e in Exam.objects.filter(published=True).prefetch_related('questions')],'free_attempt_available':not profile.free_attempt_used,'payment_enabled':False})
+    access=set(Entitlement.objects.filter(user=request.user,consumed=False).values_list('exam_id',flat=True))
+    access.update(Attempt.objects.filter(user=request.user,state='in_progress').values_list('exam_id',flat=True))
+    return JsonResponse({'exams':[{**public_exam(e),'has_access':e.id in access} for e in Exam.objects.filter(published=True).prefetch_related('questions')],'free_attempt_available':not profile.free_attempt_used,'payment_enabled':False})
 def payload(a,include_questions=True):
     snap=a.snapshot
     data={'id':str(a.id),'title':snap['title'],'section':snap['section'],'state':a.state,'deadline':a.deadline.isoformat(),'started_at':a.started_at.isoformat(),'answers':a.answers,'review_positions':a.review_positions,'result':a.result,'server_time':timezone.now().isoformat()}

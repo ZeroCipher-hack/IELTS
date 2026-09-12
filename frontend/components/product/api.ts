@@ -1,6 +1,6 @@
 export type Language='uz'|'en'|'ru';
 export type User={id:number;name:string;email:string;is_staff:boolean;target_band:number;language:Language};
-export type Exam={id:number;title:string;section:string;version:number;question_count:number;duration_seconds:number};
+export type Exam={has_access?:boolean;id:number;title:string;section:string;version:number;question_count:number;duration_seconds:number};
 export type Row={position:number;prompt:string;answer:string;correct:boolean;accepted_answers:string[];evidence:string;explanation:string;skill_tag:string};
 export type Plan={day:number;tag:string;wrong:number;total:number;question_positions:number[];minutes:number;action:string};
 export type Assessment={kind:'ai_writing';estimated:boolean;band:number;tasks:{position:number;criteria:Record<string,number>;feedback:string;evidence:string;improvement:string;band:number}[];model:string;note:string};

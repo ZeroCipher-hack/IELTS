@@ -12,6 +12,20 @@ class ExamFlowTests(TestCase):
         self.exam=Exam.objects.create(title='Test',section='Reading',published=True,duration_seconds=600,passage='A reading passage.')
         Question.objects.create(exam=self.exam,position=1,prompt='A statement',choices=['TRUE','FALSE'],accepted_answers=['TRUE'],evidence='Proof',explanation='Explanation')
         self.client.force_login(self.user)
+    def test_catalog_access_is_personal_and_resumable(self):
+        from .models import Entitlement
+        Entitlement.objects.create(user=self.other,exam=self.exam,reference='other-access')
+        self.assertFalse(self.client.get('/api/catalog/').json()['exams'][0]['has_access'])
+        a=self.start().json()
+        self.assertTrue(self.client.get('/api/catalog/').json()['exams'][0]['has_access'])
+        self.client.post(f"/api/attempts/{a['id']}/submit/",data='{}',content_type='application/json')
+        self.assertFalse(self.client.get('/api/catalog/').json()['exams'][0]['has_access'])
+        Entitlement.objects.create(user=self.user,exam=self.exam,reference='own-access')
+        self.assertTrue(self.client.get('/api/catalog/').json()['exams'][0]['has_access'])
+    def test_display_name_uses_saved_name_not_email(self):
+        self.assertEqual(self.client.get('/api/session/').json()['user']['name'],'')
+        response=self.client.patch('/api/profile/',data=json.dumps({'name':'Tolqin'}),content_type='application/json')
+        self.assertEqual(response.json()['user']['name'],'Tolqin')
     def start(self):return self.client.post('/api/attempts/',data=json.dumps({'exam_id':self.exam.pk}),content_type='application/json')
     def test_answer_keys_hidden_and_cross_user_denied(self):
         data=self.start().json();self.assertNotIn('accepted_answers',data['questions'][0]);self.assertNotIn('evidence',data['questions'][0])
