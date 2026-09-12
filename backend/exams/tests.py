@@ -91,3 +91,37 @@ class ExamFlowTests(TestCase):
         result=self.client.post(f"/api/attempts/{a['id']}/submit/",data=json.dumps({'answers':{'1':'FALSE'}}),content_type='application/json').json()['result']
         self.assertEqual(result['weekly_plan'][0]['question_positions'],[1])
         self.assertEqual(result['weekly_plan'][0]['wrong'],1)
+
+class ProfileDetailsTests(TestCase):
+    def setUp(self):
+        self.user=get_user_model().objects.create_user('profile@example.com',password='Strong-Test-123!',first_name='Tolqin')
+        self.client.force_login(self.user)
+    def patch(self,data):
+        return self.client.patch('/api/profile/',data=json.dumps(data),content_type='application/json')
+    def test_details_persist_and_invalid_update_is_atomic(self):
+        self.assertEqual(self.patch({'phone':'+998 90 123 45 67','city':'Jizzax','institution':'TATU','learner_type':'university'}).status_code,200)
+        self.assertEqual(self.client.get('/api/session/').json()['user']['phone'],'+998901234567')
+        self.assertEqual(self.patch({'name':'Changed','phone':'bad'}).status_code,400)
+        self.user.refresh_from_db();self.assertEqual(self.user.first_name,'Tolqin')
+    def test_avatar_upload_normalizes_persists_and_removes(self):
+        import io,base64
+        from PIL import Image
+        out=io.BytesIO();Image.new('RGB',(20,30),'red').save(out,format='PNG')
+        response=self.patch({'avatar':'data:image/png;base64,'+base64.b64encode(out.getvalue()).decode()})
+        self.assertEqual(response.status_code,200)
+        avatar=response.json()['user']['avatar'];self.assertTrue(avatar.startswith('data:image/jpeg;base64,'))
+        with Image.open(io.BytesIO(base64.b64decode(avatar.split(',')[1]))) as im:self.assertEqual(im.size,(256,256))
+        self.assertEqual(self.client.get('/api/session/').json()['user']['avatar'],avatar)
+        other=get_user_model().objects.create_user('another@example.com',password='Strong-Test-123!')
+        self.client.force_login(other);self.assertEqual(self.client.get('/api/session/').json()['user']['avatar'],'')
+        self.client.force_login(self.user);self.assertEqual(self.patch({'avatar':''}).json()['user']['avatar'],'')
+    def test_rejects_unsafe_or_broken_avatar(self):
+        for avatar in ['data:image/svg+xml;base64,PHN2Zz4=', 'data:image/png;base64,bm90YW5pbWFnZQ==','data:image/jpeg;base64,%%%','x'*350001]:
+            self.assertEqual(self.patch({'avatar':avatar}).status_code,400)
+    def test_registration_requires_name(self):
+        self.client.logout()
+        for name in ['', '   ', None, 'x'*81]:
+            response=self.client.post('/api/register/',data=json.dumps({'email':'new@example.com','name':name,'password':'Strong-Test-123!'}),content_type='application/json')
+            self.assertEqual(response.status_code,400)
+        response=self.client.post('/api/register/',data=json.dumps({'email':'new@example.com','name':'Tolqin','password':'Strong-Test-123!'}),content_type='application/json')
+        self.assertEqual(response.status_code,201)

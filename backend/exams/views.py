@@ -11,6 +11,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from .models import Exam,Attempt,Profile,Entitlement,LoginThrottle,AssessmentJob
 from .services import finish_attempt,validate_exam
+from .profile_data import profile_fields
 
 def error(message,status=400): return JsonResponse({'error':message},status=status)
 def body(request):
@@ -41,7 +42,7 @@ def throttle(key):
 
 def person(user):
     profile,_=Profile.objects.get_or_create(user=user)
-    return {'id':user.id,'name':user.get_full_name().strip() or (user.username if '@' not in user.username else ''),'email':user.email,'is_staff':user.is_staff,'target_band':float(profile.target_band),'language':profile.language}
+    return {'id':user.id,'name':user.get_full_name().strip() or (user.username if '@' not in user.username else ''),'email':user.email,'is_staff':user.is_staff,'target_band':float(profile.target_band),'language':profile.language,'phone':profile.phone,'city':profile.city,'institution':profile.institution,'learner_type':profile.learner_type,'avatar':profile.avatar}
 @endpoint(['GET'],False)
 def health(request):
     from .gemini import configured
@@ -51,7 +52,9 @@ def health(request):
 def session(request):return JsonResponse({'user':person(request.user) if request.user.is_authenticated else None})
 @endpoint(['POST'],False)
 def register(request):
-    d=body(request);email=str(d.get('email','')).strip().lower();password=d.get('password','');name=str(d.get('name','')).strip()[:80]
+    d=body(request);email=str(d.get('email','')).strip().lower();password=d.get('password','');name=d.get('name','')
+    if not isinstance(name,str) or not name.strip() or len(name)>80:return error('Ismingizni kiriting (1–80 belgi).')
+    name=name.strip()
     if throttle('register:'+request.META.get('REMOTE_ADDR','unknown')):return error('Ko‘p urinish. 5 daqiqadan keyin qaytaring.',429)
     from django.core.validators import validate_email
     try:validate_email(email);validate_password(password)
@@ -160,6 +163,7 @@ def submit(request,pk):
 def profile(request):
     from decimal import Decimal, InvalidOperation
     d=body(request)
+    optional=profile_fields(d)
     with transaction.atomic():
         p,_=Profile.objects.select_for_update().get_or_create(user=request.user)
         if 'target_band' in d:
@@ -173,6 +177,7 @@ def profile(request):
         if 'name' in d:
             if not isinstance(d['name'],str) or not d['name'].strip() or len(d['name'])>80:return error('Ism 1–80 belgi bo‘lsin.')
             request.user.first_name=d['name'].strip();request.user.save(update_fields=['first_name'])
+        for key,value in optional.items():setattr(p,key,value)
         p.save()
     return JsonResponse({'user':person(request.user)})
 

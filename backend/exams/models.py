@@ -29,6 +29,11 @@ class Profile(models.Model):
     free_attempt_used=models.BooleanField(default=False)
     target_band=models.DecimalField(max_digits=2,decimal_places=1,default=7)
     language=models.CharField(max_length=2,default='uz',choices=[('uz','O‘zbekcha'),('en','English'),('ru','Русский')])
+    phone=models.CharField(max_length=24,blank=True)
+    city=models.CharField(max_length=80,blank=True)
+    institution=models.CharField(max_length=160,blank=True)
+    learner_type=models.CharField(max_length=24,blank=True,choices=[('school','School'),('university','University'),('learning_center','Learning center'),('independent','Independent')])
+    avatar=models.TextField(blank=True)
 class Entitlement(models.Model):
     user=models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.CASCADE)
     exam=models.ForeignKey(Exam,on_delete=models.PROTECT)

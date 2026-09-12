@@ -1,5 +1,5 @@
 export type Language='uz'|'en'|'ru';
-export type User={id:number;name:string;email:string;is_staff:boolean;target_band:number;language:Language};
+export type User={phone:string;city:string;institution:string;learner_type:string;avatar:string;id:number;name:string;email:string;is_staff:boolean;target_band:number;language:Language};
 export type Exam={has_access?:boolean;id:number;title:string;section:string;version:number;question_count:number;duration_seconds:number};
 export type Row={position:number;prompt:string;answer:string;correct:boolean;accepted_answers:string[];evidence:string;explanation:string;skill_tag:string};
 export type Plan={day:number;tag:string;wrong:number;total:number;question_positions:number[];minutes:number;action:string};
