@@ -31,3 +31,8 @@ SESSION_COOKIE_AGE=86400
 
 if os.getenv('DJANGO_TRUST_PROXY')=='1':
     SECURE_PROXY_SSL_HEADER=('HTTP_X_FORWARDED_PROTO','https')
+
+AI_ENABLED=os.getenv('AI_ENABLED','0')=='1'
+GEMINI_API_KEY=os.getenv('GEMINI_API_KEY','')
+GEMINI_WRITING_MODEL=os.getenv('GEMINI_WRITING_MODEL','gemini-2.5-flash')
+GEMINI_LIVE_MODEL=os.getenv('GEMINI_LIVE_MODEL','gemini-2.5-flash-native-audio-preview-12-2025')

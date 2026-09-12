@@ -1,6 +1,7 @@
 import uuid
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 class Exam(models.Model):
     title=models.CharField(max_length=180)
     section=models.CharField(max_length=16,choices=[(s,s) for s in ['Reading','Listening','Writing','Speaking']])
@@ -51,3 +52,11 @@ class LoginThrottle(models.Model):
     key=models.CharField(max_length=64,unique=True)
     count=models.PositiveIntegerField(default=0)
     reset_at=models.DateTimeField()
+
+class AssessmentJob(models.Model):
+    attempt=models.OneToOneField(Attempt,on_delete=models.CASCADE,related_name='assessment_job')
+    state=models.CharField(max_length=16,default='pending')
+    tries=models.PositiveIntegerField(default=0)
+    available_at=models.DateTimeField(default=timezone.now)
+    lease=models.UUIDField(null=True,blank=True)
+    error_code=models.CharField(max_length=64,blank=True)

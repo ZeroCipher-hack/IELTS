@@ -53,4 +53,7 @@ def finish_attempt(a):
                   'weekly_plan':plan,'note':'Raw score only. This test has no validated IELTS band mapping.'}
         a.state='graded'
     a.save(update_fields=['answers','state','submitted_at','result'])
+    if a.snapshot['section']=='Writing':
+        from .models import AssessmentJob
+        AssessmentJob.objects.get_or_create(attempt=a)
     return a

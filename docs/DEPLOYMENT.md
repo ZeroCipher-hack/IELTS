@@ -47,3 +47,6 @@ Bulk import: `python manage.py import_exam /path/to/exam.json`. It validates and
 - Verified email/password recovery and stronger free-attempt abuse prevention remain.
 - Backend validation messages and admin-entered explanations currently remain in their source language; primary UI supports UZ/EN/RU.
 - Load testing, backup restore drill, production monitoring and final accessibility review remain.
+
+## AI pilot update
+Writing provider/worker and a staff-only voice pilot are now implemented; see AI_SETUP.md. Full Speaking timing, audio retention and audio-based scoring still remain. Enable Compose profile `ai` only after configuring the server key.

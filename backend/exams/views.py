@@ -9,7 +9,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
-from .models import Exam,Attempt,Profile,Entitlement,LoginThrottle
+from .models import Exam,Attempt,Profile,Entitlement,LoginThrottle,AssessmentJob
 from .services import finish_attempt,validate_exam
 
 def error(message,status=400): return JsonResponse({'error':message},status=status)
@@ -43,7 +43,9 @@ def person(user):
     profile,_=Profile.objects.get_or_create(user=user)
     return {'id':user.id,'name':user.first_name or user.username,'email':user.email,'is_staff':user.is_staff,'target_band':float(profile.target_band),'language':profile.language}
 @endpoint(['GET'],False)
-def health(request):return JsonResponse({'status':'ok','ai_configured':False,'payments_configured':False,'phone_verification_configured':False})
+def health(request):
+    from .gemini import configured
+    return JsonResponse({'status':'ok','ai_configured':configured(),'payments_configured':False,'phone_verification_configured':False})
 @ensure_csrf_cookie
 @endpoint(['GET'],False)
 def session(request):return JsonResponse({'user':person(request.user) if request.user.is_authenticated else None})
@@ -78,6 +80,10 @@ def catalog(request):
 def payload(a,include_questions=True):
     snap=a.snapshot
     data={'id':str(a.id),'title':snap['title'],'section':snap['section'],'state':a.state,'deadline':a.deadline.isoformat(),'started_at':a.started_at.isoformat(),'answers':a.answers,'review_positions':a.review_positions,'result':a.result,'server_time':timezone.now().isoformat()}
+    if a.state=='awaiting_assessment':
+        from .gemini import configured
+        job=AssessmentJob.objects.filter(attempt=a).first()
+        data['assessment_status']=('disabled' if not configured() else job.state if job else 'pending')
     if include_questions:
         data.update({'passage':snap['passage'],'audio_url':snap.get('audio_url',''),'questions':[{k:v for k,v in q.items() if k not in ['accepted_answers','evidence','explanation']} for q in snap['questions']]})
     return data
@@ -110,7 +116,7 @@ def attempts(request):
             entitlement=Entitlement.objects.select_for_update().filter(user=request.user,exam=exam,consumed=False).first()
             if not entitlement:return error('Bepul urinish ishlatilgan. To‘lov hali ulanmagan; administrator kirish huquqi bera oladi.',402)
             entitlement.consumed=True;entitlement.save()
-        snapshot={'title':exam.title,'section':exam.section,'version':exam.version,'passage':exam.passage,'audio_url':exam.audio_url,'questions':qs}
+        snapshot={'title':exam.title,'section':exam.section,'version':exam.version,'passage':exam.passage,'audio_url':exam.audio_url,'questions':qs,'feedback_language':profile.language}
         a=Attempt.objects.create(user=request.user,exam=exam,snapshot=snapshot,deadline=timezone.now()+timedelta(seconds=exam.duration_seconds))
     return JsonResponse(payload(a),status=201)
 def clean_answers(d,snapshot):
@@ -167,3 +173,24 @@ def profile(request):
             request.user.first_name=d['name'].strip();request.user.save(update_fields=['first_name'])
         p.save()
     return JsonResponse({'user':person(request.user)})
+
+@endpoint(['POST'])
+def voice_token(request):
+    # Staff-only pilot until timing, audio retention and scoring are calibrated.
+    if not request.user.is_staff:return error('Administrator sinovi uchun.',403)
+    from django.conf import settings
+    from .gemini import post,AIError
+    if throttle('voice:'+str(request.user.pk)):return error('Sinov limiti tugadi. Keyinroq qaytaring.',429)
+    now=timezone.now()
+    model='models/'+settings.GEMINI_LIVE_MODEL
+    setup={'model':model,'generationConfig':{'responseModalities':['AUDIO']},
+           'systemInstruction':{'parts':[{'text':'You are an English speaking practice examiner. This is a five-minute technical pilot, not an official IELTS test. Ask one short question at a time about home, study, work and hobbies. Listen to the full answer, then ask a relevant follow-up. Speak only English. Never award a band or claim this is a completed IELTS exam. Do not ask for identity documents or private information.'}]}}
+    try:
+        token=post('auth_tokens',{'uses':1,'expireTime':(now+timedelta(minutes=5)).isoformat(),
+            'newSessionExpireTime':(now+timedelta(seconds=60)).isoformat(),'bidiGenerateContentSetup':setup})
+        name=token.get('name')
+        if not isinstance(name,str) or not name:raise AIError('AI_TOKEN_INVALID')
+    except AIError as exc:return error(str(exc),503)
+    response=JsonResponse({'token':name,'model':model,'expires_in':300})
+    response['Cache-Control']='no-store'
+    return response

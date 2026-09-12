@@ -1,7 +1,7 @@
 from django.contrib import admin,messages
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from .models import Exam,Question,Attempt,Profile,Entitlement
+from .models import Exam,Question,Attempt,Profile,Entitlement,AssessmentJob
 from .services import validate_exam
 
 class Questions(admin.StackedInline):
@@ -62,3 +62,16 @@ class ProfileAdmin(admin.ModelAdmin):
     list_display=['user','target_band','language','free_attempt_used']
     readonly_fields=['free_attempt_used']
 admin.site.site_header='IELTSQA — testlarni boshqarish'
+
+@admin.register(AssessmentJob)
+class AssessmentJobAdmin(admin.ModelAdmin):
+    list_display=['attempt','state','tries','error_code','available_at']
+    list_filter=['state']
+    readonly_fields=['attempt','state','tries','available_at','lease','error_code']
+    actions=['retry_failed']
+    def has_add_permission(self,request):return False
+    def has_delete_permission(self,request,obj=None):return False
+    @admin.action(description='AI xatosini tuzatgandan keyin qayta baholash')
+    def retry_failed(self,request,queryset):
+        from django.utils import timezone
+        queryset.filter(state='failed',attempt__state='awaiting_assessment').update(state='pending',tries=0,error_code='',lease=None,available_at=timezone.now())

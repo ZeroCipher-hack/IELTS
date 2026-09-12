@@ -27,6 +27,20 @@ services:
         condition: service_healthy
     volumes:
       - static_files:/app/staticfiles
+  ai_worker:
+    build: ./backend
+    restart: unless-stopped
+    profiles: [ai]
+    env_file: .env
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: ieltsqa
+      POSTGRES_USER: ieltsqa
+      DJANGO_DEBUG: '0'
+    command: [python, manage.py, assess_pending, --watch]
+    depends_on:
+      db:
+        condition: service_healthy
   frontend:
     build:
       context: ./frontend
