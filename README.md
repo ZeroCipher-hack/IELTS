@@ -1,3 +1,5 @@
+> **Current status (2026-09-12):** The main frontend now uses real Django accounts and saved results. The older sample design is available at `/design`. Reading/Listening grading and Writing collection work without AI credentials. This is not yet a complete paid IELTS product: Speaking, AI assessment, full-exam orchestration, payments and production validation remain. See [deployment and launch checklist](docs/DEPLOYMENT.md).
+
 # IELTSQA
 
 IELTS Academic mock examination platform. Repository: ZeroCipher-hack/IELTS.

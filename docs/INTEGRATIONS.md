@@ -13,4 +13,8 @@ Provider merchant credentials and sandbox access are required. Use verified call
 Provide one complete Academic test: Listening audio/transcript/keys; Reading passages/keys/evidence; Writing graphics/prompts; Speaking prompts. The seeded test is only a five-question original Reading exercise.
 
 ## Verification completed
-Eight Django tests cover authentication/CSRF, cross-user isolation, hidden answer keys, grading idempotency, one free attempt, expired deadlines, invalid answer keys and snapshot preservation. No claim is made of 50-session capacity or live provider readiness.
+Thirteen Django tests cover authentication/CSRF, cross-user isolation, hidden answer keys, grading idempotency, one free attempt, expired deadlines, invalid answer keys and snapshot preservation. No claim is made of 50-session capacity or live provider readiness.
+
+## September 12 product update
+
+The main route now renders real authenticated data in UZ/EN/RU; the old sample UI is at `/design`. Writing collection is enabled with explicit acknowledgement that assessment is pending. Reading/Listening produce evidence rows and a rule-based weekly plan. Next-to-Django HTTP registration, CSRF, catalog, save, submit, history, profile and logout were exercised successfully after fixing rewrite trailing slashes. Browser verification could not run because Chromium download was blocked; Docker deployment and load tests are not yet verified. See DEPLOYMENT.md for exact setup and remaining launch gates.

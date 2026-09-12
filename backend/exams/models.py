@@ -16,7 +16,7 @@ class Question(models.Model):
     position=models.PositiveIntegerField()
     prompt=models.TextField()
     choices=models.JSONField(default=list,blank=True)
-    accepted_answers=models.JSONField(default=list)
+    accepted_answers=models.JSONField(default=list,blank=True)
     evidence=models.TextField(blank=True)
     explanation=models.TextField(blank=True)
     skill_tag=models.CharField(max_length=100,blank=True)
@@ -26,6 +26,8 @@ class Question(models.Model):
 class Profile(models.Model):
     user=models.OneToOneField(settings.AUTH_USER_MODEL,on_delete=models.CASCADE)
     free_attempt_used=models.BooleanField(default=False)
+    target_band=models.DecimalField(max_digits=2,decimal_places=1,default=7)
+    language=models.CharField(max_length=2,default='uz',choices=[('uz','O‘zbekcha'),('en','English'),('ru','Русский')])
 class Entitlement(models.Model):
     user=models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.CASCADE)
     exam=models.ForeignKey(Exam,on_delete=models.PROTECT)
@@ -38,6 +40,7 @@ class Attempt(models.Model):
     exam=models.ForeignKey(Exam,on_delete=models.PROTECT)
     snapshot=models.JSONField()
     answers=models.JSONField(default=dict)
+    review_positions=models.JSONField(default=list,blank=True)
     state=models.CharField(max_length=24,default='in_progress')
     started_at=models.DateTimeField(auto_now_add=True)
     deadline=models.DateTimeField()

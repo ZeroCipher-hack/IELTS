@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "IELTSQA — Natijangiz, keyingi qadamingiz",
-  description: "IELTS Academic sinov imtihoni platformasi. Natijalar, xatolar tahlili va shaxsiy haftalik reja. Interaktiv demo.",
+  description: "IELTS Academic sinov imtihoni platformasi. Natijalar, xatolar tahlili va shaxsiy haftalik reja.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
