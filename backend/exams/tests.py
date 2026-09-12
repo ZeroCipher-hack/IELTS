@@ -1,0 +1,50 @@
+import json
+from datetime import timedelta
+from django.test import TestCase,Client
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+from .models import Exam,Question,Attempt,Profile
+class ExamFlowTests(TestCase):
+    def setUp(self):
+        self.user=get_user_model().objects.create_user('learner@example.com',password='Strong-Test-123!')
+        self.other=get_user_model().objects.create_user('other@example.com',password='Strong-Test-123!')
+        Profile.objects.create(user=self.user)
+        self.exam=Exam.objects.create(title='Test',section='Reading',published=True,duration_seconds=600)
+        Question.objects.create(exam=self.exam,position=1,prompt='A statement',choices=['TRUE','FALSE'],accepted_answers=['TRUE'],evidence='Proof',explanation='Explanation')
+        self.client.force_login(self.user)
+    def start(self):return self.client.post('/api/attempts/',data=json.dumps({'exam_id':self.exam.pk}),content_type='application/json')
+    def test_answer_keys_hidden_and_cross_user_denied(self):
+        data=self.start().json();self.assertNotIn('accepted_answers',data['questions'][0]);self.assertNotIn('evidence',data['questions'][0])
+        self.client.force_login(self.other)
+        self.assertEqual(self.client.get(f"/api/attempts/{data['id']}/").status_code,404)
+    def test_grading_idempotent_and_one_free_attempt(self):
+        data=self.start().json();id=data['id']
+        self.assertEqual(self.start().json()['id'],id)
+        result=self.client.post(f'/api/attempts/{id}/submit/',data=json.dumps({'answers':{'1':' true '}}),content_type='application/json').json()
+        self.assertEqual(result['result']['correct'],1)
+        again=self.client.post(f'/api/attempts/{id}/submit/',data=json.dumps({'answers':{'1':'FALSE'}}),content_type='application/json').json()
+        self.assertEqual(again['result']['correct'],1)
+        self.assertEqual(self.start().status_code,402)
+    def test_deadline_rejects_late_answers(self):
+        id=self.start().json()['id'];Attempt.objects.filter(pk=id).update(deadline=timezone.now()-timedelta(seconds=1))
+        self.assertEqual(self.client.patch(f'/api/attempts/{id}/',data=json.dumps({'answers':{'1':'TRUE'}}),content_type='application/json').status_code,409)
+        data=self.client.post(f'/api/attempts/{id}/submit/',data=json.dumps({'answers':{'1':'TRUE'}}),content_type='application/json').json()
+        self.assertEqual(data['result']['correct'],0)
+    def test_snapshot_survives_content_change(self):
+        id=self.start().json()['id'];Question.objects.filter(exam=self.exam).update(accepted_answers=['FALSE'])
+        data=self.client.post(f'/api/attempts/{id}/submit/',data=json.dumps({'answers':{'1':'TRUE'}}),content_type='application/json').json()
+        self.assertEqual(data['result']['correct'],1)
+    def test_csrf_required_for_authentication(self):
+        c=Client(enforce_csrf_checks=True)
+        self.assertEqual(c.post('/api/login/',data='{}',content_type='application/json').status_code,403)
+    def test_unauthenticated_access_denied(self):
+        self.client.logout();self.assertEqual(self.client.get('/api/attempts/').status_code,401)
+    def test_unknown_question_rejected(self):
+        id=self.start().json()['id']
+        self.assertEqual(self.client.patch(f'/api/attempts/{id}/',data=json.dumps({'answers':{'999':'TRUE'}}),content_type='application/json').status_code,400)
+    def test_saved_answers_used_after_deadline(self):
+        id=self.start().json()['id']
+        self.client.patch(f'/api/attempts/{id}/',data=json.dumps({'answers':{'1':'TRUE'}}),content_type='application/json')
+        Attempt.objects.filter(pk=id).update(deadline=timezone.now()-timedelta(seconds=1))
+        data=self.client.post(f'/api/attempts/{id}/submit/',data='{}',content_type='application/json').json()
+        self.assertEqual(data['result']['correct'],1)

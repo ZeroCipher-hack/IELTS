@@ -4,7 +4,7 @@
 IELTS Academic first. Full and separate-section exams are paid. One chosen section is free once per verified user. Planned full-exam price: 200,000 UZS; individual prices depend on measured operating costs. Uzbek payment methods. UZ/EN/RU interface and reports, English test content. Target: 50 simultaneous sessions, including a separate voice-concurrency test. Initial demo target: one week. School finances promotion and operating budget.
 
 ## Current implementation
-Only the frontend prototype exists. Next.js + React + TypeScript, device-local writing drafts/checklists/question drafts. Recording stays in browser memory. Scores/history are illustrative. No authentication, real payment or AI services are integrated.
+Next.js frontend and Django API are implemented. Accounts use email/password and Django sessions with CSRF protection. The API supports database-backed tests, one free attempt per account, staff entitlements, immutable attempt snapshots, server deadlines, answer saving, deterministic grading and history. SQLite is the local default; PostgreSQL is configurable. Django staff admin manages content. Browser-local Writing and microphone tools remain demonstrations. The hosted frontend has no Django server attached yet. No payment, phone verification or AI service is integrated.
 
 ## Proposed production architecture
 Frontend -> Django REST API -> PostgreSQL.
@@ -13,7 +13,7 @@ API -> Redis/Celery queue -> AI assessment -> saved report.
 Browser -> authorized short-lived voice session -> voice provider.
 Payment provider -> authenticated, verified, idempotent callback -> payment record -> exam entitlement.
 
-Django and Celery are proposed, not installed in this repository yet. Model/provider selection follows measured grading quality, latency and cost.
+Django is implemented. Celery, Redis and AI/voice adapters remain planned. Model/provider selection follows measured grading quality, latency and cost.
 
 ## Core entities
 User, target, exam version, section, material, question, accepted answer, attempt, response, recording, assessment, criterion score, evidence reference, recommendation, weekly plan, payment, entitlement and free-attempt claim.
