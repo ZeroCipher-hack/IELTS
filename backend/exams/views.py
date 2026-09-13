@@ -199,7 +199,7 @@ def voice_token(request):
     now=timezone.now();locked=constraints(part)
     try:
         token=post('auth_tokens',{'uses':1,'expireTime':(now+timedelta(minutes=5)).isoformat(),
-            'newSessionExpireTime':(now+timedelta(seconds=60)).isoformat(),'liveConnectConstraints':locked})
+            'newSessionExpireTime':(now+timedelta(seconds=60)).isoformat(),'bidiGenerateContentSetup':locked})
         name=token.get('name')
         if not isinstance(name,str) or not name:raise AIError('AI_TOKEN_INVALID')
     except AIError as exc:return error(str(exc),503)

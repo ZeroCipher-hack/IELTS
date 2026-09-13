@@ -13,7 +13,6 @@ def constraints(part):
         2: 'Conduct Part 2 practice. The candidate has already had one minute to prepare this cue card: '+CUE['title']+' '+ '; '.join(CUE['points'])+'. Briefly invite them to begin. Let them speak at length; do not interrupt pauses or ask follow-up questions until they explicitly finish.',
         3: 'Conduct Part 3 practice, discussing public places and communities, related to this cue card: '+CUE['title']+'. Ask one abstract question at a time about changes, causes, comparisons and consequences. Wait for each full answer.'
     }
-    return {'model': 'models/'+settings.GEMINI_LIVE_MODEL, 'config': {
-        'responseModalities': ['AUDIO'], 'inputAudioTranscription': {}, 'outputAudioTranscription': {},
+    return {'model': 'models/'+settings.GEMINI_LIVE_MODEL, 'generationConfig': {'responseModalities': ['AUDIO']}, 'inputAudioTranscription': {}, 'outputAudioTranscription': {},
         'systemInstruction': {'parts': [{'text': 'You are an AI English speaking practice examiner, not a human examiner. Speak only English. Do not translate, coach, give model answers, award bands or claim an official exam. Never request identity documents or private data. '+instructions[part]}]}
-    }}
+    }

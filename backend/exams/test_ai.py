@@ -48,7 +48,11 @@ class AIIntegrationTests(TestCase):
             response=self.client.post('/api/voice/token/',data='{}',content_type='application/json')
             self.assertEqual(response.status_code,200);self.assertEqual(response['Cache-Control'],'no-store')
             self.assertEqual(mocked.call_args.args[1]['uses'],1)
-            self.assertIn('systemInstruction',mocked.call_args.args[1]['liveConnectConstraints']['config'])
+            self.assertIn('systemInstruction',mocked.call_args.args[1]['bidiGenerateContentSetup'])
+            setup=mocked.call_args.args[1]['bidiGenerateContentSetup']
+            self.assertEqual(setup['generationConfig']['responseModalities'],['AUDIO'])
+            self.assertNotIn('config',setup)
+            self.assertNotIn('liveConnectConstraints',mocked.call_args.args[1])
             self.assertNotIn('test-only-placeholder',response.content.decode())
     def test_voice_status_does_not_expose_key(self):
         self.client.force_login(self.user)
@@ -61,9 +65,9 @@ class AIIntegrationTests(TestCase):
         with patch('exams.gemini.post',return_value={'name':'ephemeral-test-token'}) as mocked:
             response=self.client.post('/api/voice/token/',data=json.dumps({'part':2}),content_type='application/json')
             self.assertEqual(response.status_code,200)
-            locked=mocked.call_args.args[1]['liveConnectConstraints']
-            self.assertIn('Part 2',locked['config']['systemInstruction']['parts'][0]['text'])
-            self.assertIn('inputAudioTranscription',locked['config'])
+            locked=mocked.call_args.args[1]['bidiGenerateContentSetup']
+            self.assertIn('Part 2',locked['systemInstruction']['parts'][0]['text'])
+            self.assertIn('inputAudioTranscription',locked)
     def test_bad_part_does_not_call_provider(self):
         self.user.is_staff=True;self.user.save();self.client.force_login(self.user)
         with patch('exams.gemini.post') as mocked:

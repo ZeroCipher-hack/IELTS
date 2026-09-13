@@ -57,7 +57,7 @@ Microphone test runs locally for 15 seconds without sending audio to AI. Speaker
 
 Staff can test when AI_ENABLED=1 and GEMINI_API_KEY is set. Ordinary signed-in accounts additionally require VOICE_PRACTICE_ENABLED=1 (disabled by default). This separate ungraded mode does not grant paid exam access. Token throttling remains enabled. `/api/voice/status/` reports configuration/access without secrets; it does not perform a live provider health check.
 
-Token requests use documented liveConnectConstraints and a configurable current Live model. Error feedback distinguishes missing configuration, disabled access, provider errors, quota, microphone permission/device problems and timeout. Each socket has a 20-second setup timeout; disconnects stop capture/playback. Live provider and browser verification remain pending.
+Token requests use REST bidiGenerateContentSetup (model, generationConfig and systemInstruction at setup level; liveConnectConstraints is not a REST AuthToken field) and a configurable current Live model. Error feedback distinguishes missing configuration, disabled access, provider errors, quota, microphone permission/device problems and timeout. Each socket has a 20-second setup timeout; disconnects stop capture/playback. Live provider and browser verification remain pending.
 
 Start locally from backend (Django does not auto-load .env):
 
