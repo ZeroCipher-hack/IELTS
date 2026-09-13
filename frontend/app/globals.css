@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "../vendor/shadcn-tailwind-4.13.0.css";
 
 /* Tokens: teal is the only decorative accent; red communicates errors. */
 :root {
@@ -273,3 +272,24 @@ progress::-moz-progress-bar { background: var(--primary); }
   .product-body { max-width: none; padding: 0; }
   .result-row { break-inside: avoid; }
 }
+
+/* Comparable score series with an accessible data table. */
+.analytics-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-6); }
+.analytics-module,.analytics-empty { display:flex; flex-direction:column; gap:var(--space-4); }
+.analytics-module .section-title { margin-bottom:0; flex-wrap:wrap; }
+.analytics-select { display:flex; flex-direction:column; gap:var(--space-2); font-size:14px; color:var(--muted-foreground); }
+.analytics-select select { width:100%; }
+.analytics-value strong { font-size:32px; }
+.analytics-value small { font-size:16px; }
+.analytics-value p { font-size:14px; }
+.analytics-chart { width:100%; height:auto; }
+.analytics-chart text { fill:var(--muted-foreground); font-size:12px; }
+.chart-gridline { stroke:var(--border); stroke-width:1; }
+.chart-line { fill:none; stroke:var(--accent-foreground); stroke-width:2; }
+.chart-point { fill:var(--accent-foreground); }
+.analytics-module summary { cursor:pointer; color:var(--accent-foreground); }
+.analytics-table-wrap { overflow:auto; margin-top:var(--space-4); }
+.analytics-module table { width:100%; border-collapse:collapse; font-size:14px; }
+.analytics-module caption { text-align:left; color:var(--muted-foreground); }
+.analytics-module th,.analytics-module td { text-align:left; padding:var(--space-2); border-bottom:1px solid var(--border); }
+@media(max-width:767px) { .analytics-grid { grid-template-columns:1fr; } }

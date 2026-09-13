@@ -201,3 +201,10 @@ def voice_token(request):
     response=JsonResponse({'token':name,'model':model,'expires_in':300})
     response['Cache-Control']='no-store'
     return response
+
+@endpoint(['GET'])
+def analytics(request):
+    from .analytics import student_analytics
+    response=JsonResponse(student_analytics(request.user))
+    response['Cache-Control']='private, no-store'
+    return response
