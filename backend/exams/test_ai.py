@@ -48,5 +48,32 @@ class AIIntegrationTests(TestCase):
             response=self.client.post('/api/voice/token/',data='{}',content_type='application/json')
             self.assertEqual(response.status_code,200);self.assertEqual(response['Cache-Control'],'no-store')
             self.assertEqual(mocked.call_args.args[1]['uses'],1)
-            self.assertIn('systemInstruction',mocked.call_args.args[1]['bidiGenerateContentSetup'])
+            self.assertIn('systemInstruction',mocked.call_args.args[1]['liveConnectConstraints']['config'])
             self.assertNotIn('test-only-placeholder',response.content.decode())
+    def test_voice_status_does_not_expose_key(self):
+        self.client.force_login(self.user)
+        response=self.client.get('/api/voice/status/')
+        self.assertTrue(response.json()['configured']);self.assertFalse(response.json()['allowed'])
+        self.assertNotIn('test-only-placeholder',response.content.decode())
+    @override_settings(VOICE_PRACTICE_ENABLED=True)
+    def test_student_practice_flag_and_part_constraints(self):
+        self.client.force_login(self.user)
+        with patch('exams.gemini.post',return_value={'name':'ephemeral-test-token'}) as mocked:
+            response=self.client.post('/api/voice/token/',data=json.dumps({'part':2}),content_type='application/json')
+            self.assertEqual(response.status_code,200)
+            locked=mocked.call_args.args[1]['liveConnectConstraints']
+            self.assertIn('Part 2',locked['config']['systemInstruction']['parts'][0]['text'])
+            self.assertIn('inputAudioTranscription',locked['config'])
+    def test_bad_part_does_not_call_provider(self):
+        self.user.is_staff=True;self.user.save();self.client.force_login(self.user)
+        with patch('exams.gemini.post') as mocked:
+            for part in [0,4,True,'2']:
+                self.assertEqual(self.client.post('/api/voice/token/',data=json.dumps({'part':part}),content_type='application/json').status_code,400)
+            mocked.assert_not_called()
+    @override_settings(AI_ENABLED=False)
+    def test_voice_missing_configuration_reported(self):
+        self.user.is_staff=True;self.user.save();self.client.force_login(self.user)
+        self.assertEqual(self.client.get('/api/voice/status/').json()['reason'],'AI_NOT_CONFIGURED')
+        with patch('exams.gemini.post') as mocked:
+            self.assertEqual(self.client.post('/api/voice/token/',data='{}',content_type='application/json').status_code,503)
+            mocked.assert_not_called()

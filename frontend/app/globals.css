@@ -293,3 +293,27 @@ progress::-moz-progress-bar { background: var(--primary); }
 .analytics-module caption { text-align:left; color:var(--muted-foreground); }
 .analytics-module th,.analytics-module td { text-align:left; padding:var(--space-2); border-bottom:1px solid var(--border); }
 @media(max-width:767px) { .analytics-grid { grid-template-columns:1fr; } }
+
+/* Speaking practice: measured audio indicators and an uncluttered examiner stage. */
+.speaking-layout { display:grid; grid-template-columns:minmax(0,1.8fr) minmax(260px,1fr); gap:var(--space-6); margin-top:var(--space-6); align-items:start; }
+.examiner-stage { display:flex; flex-direction:column; align-items:center; gap:var(--space-4); }
+.speaking-stage-top { display:flex; width:100%; justify-content:space-between; gap:var(--space-4); }
+.examiner-portrait { position:relative; width:min(100%,400px); border-radius:24px; overflow:hidden; border:4px solid transparent; }
+.examiner-portrait.is-speaking { border-color:var(--primary); }
+.examiner-portrait img { display:block; width:100%; }
+.examiner-label { position:absolute; bottom:16px; left:16px; padding:8px 12px; background:var(--card); color:var(--foreground); border-radius:8px; font-size:12px; }
+.voice-state { color:var(--accent-foreground); }
+.voice-wave { display:flex; align-items:center; justify-content:center; gap:4px; height:72px; width:100%; }
+.voice-wave span { width:4px; border-radius:4px; background:var(--primary); }
+.voice-controls { display:flex; flex-wrap:wrap; gap:var(--space-3); justify-content:center; }
+.speaking-guide { display:flex; flex-direction:column; gap:var(--space-6); }
+.speaking-guide ol { list-style:none; padding:0; margin:0; display:grid; gap:var(--space-2); }
+.speaking-guide ol li { display:flex; justify-content:space-between; gap:var(--space-4); padding:var(--space-3); border-radius:8px; }
+.speaking-guide li[aria-current=step] { background:var(--accent); color:var(--accent-foreground); }
+.speaking-cue { padding:var(--space-4); border:1px solid var(--border); border-radius:12px; }
+.speaking-cue ul { list-style:disc; padding-left:var(--space-6); margin-top:var(--space-4); }
+.speaking-guide p { font-size:14px; }
+.voice-availability,.speaking-transcript { margin-top:var(--space-6); }
+.speaking-transcript>div { padding:var(--space-4) 0; border-bottom:1px solid var(--border); }
+.speaking-transcript p { white-space:pre-wrap; overflow-wrap:anywhere; }
+@media(max-width:767px) { .speaking-layout { grid-template-columns:1fr; } .examiner-portrait { max-width:280px; } .voice-wave { gap:3px; } }

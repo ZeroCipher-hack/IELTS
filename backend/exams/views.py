@@ -181,24 +181,29 @@ def profile(request):
         p.save()
     return JsonResponse({'user':person(request.user)})
 
+@endpoint(['GET'])
+def voice_status(request):
+    from .voice import access
+    response=JsonResponse(access(request.user));response['Cache-Control']='no-store';return response
+
 @endpoint(['POST'])
 def voice_token(request):
-    # Staff-only pilot until timing, audio retention and scoring are calibrated.
-    if not request.user.is_staff:return error('Administrator sinovi uchun.',403)
-    from django.conf import settings
+    from .voice import access,constraints
     from .gemini import post,AIError
-    if throttle('voice:'+str(request.user.pk)):return error('Sinov limiti tugadi. Keyinroq qaytaring.',429)
-    now=timezone.now()
-    model='models/'+settings.GEMINI_LIVE_MODEL
-    setup={'model':model,'generationConfig':{'responseModalities':['AUDIO']},
-           'systemInstruction':{'parts':[{'text':'You are an English speaking practice examiner. This is a five-minute technical pilot, not an official IELTS test. Ask one short question at a time about home, study, work and hobbies. Listen to the full answer, then ask a relevant follow-up. Speak only English. Never award a band or claim this is a completed IELTS exam. Do not ask for identity documents or private information.'}]}}
+    state=access(request.user)
+    if not state['allowed']:return error('VOICE_PRACTICE_DISABLED',403)
+    if not state['configured']:return error('AI_NOT_CONFIGURED',503)
+    d=body(request);part=d.get('part',1)
+    if type(part) is not int or part not in (1,2,3):return error('VOICE_PART_INVALID')
+    if throttle('voice:'+str(request.user.pk)):return error('AI_RATE_LIMIT',429)
+    now=timezone.now();locked=constraints(part)
     try:
         token=post('auth_tokens',{'uses':1,'expireTime':(now+timedelta(minutes=5)).isoformat(),
-            'newSessionExpireTime':(now+timedelta(seconds=60)).isoformat(),'bidiGenerateContentSetup':setup})
+            'newSessionExpireTime':(now+timedelta(seconds=60)).isoformat(),'liveConnectConstraints':locked})
         name=token.get('name')
         if not isinstance(name,str) or not name:raise AIError('AI_TOKEN_INVALID')
     except AIError as exc:return error(str(exc),503)
-    response=JsonResponse({'token':name,'model':model,'expires_in':300})
+    response=JsonResponse({'token':name,'model':locked['model'],'expires_in':300,'part':part})
     response['Cache-Control']='no-store'
     return response
 

@@ -1,6 +1,6 @@
 # Gemini pilot setup
 
-Implemented: server-side Writing assessment, validated criterion scores, verbatim evidence checks, database-backed jobs with a lease and up to three attempts, rate-limit backoff, result polling, and a staff-only five-minute live voice pilot.
+Implemented: server-side Writing assessment, validated criterion scores, verbatim evidence checks, database-backed jobs with a lease and up to three attempts, rate-limit backoff, result polling, and a Speaking practice studio with microphone/speaker checks and timed stages.
 
 No real API key is stored in this repository. No live Gemini call or microphone/browser test has yet been completed. Tests use mocked provider responses. Free-tier eligibility and quotas must be checked in your own AI Studio project; code cannot ensure a model is free. The worker does not change billing tiers or select paid fallbacks.
 
@@ -12,7 +12,7 @@ Set these in the **server** environment (or the root .env consumed by Compose):
 AI_ENABLED=1
 GEMINI_API_KEY=YOUR_NEW_PRIVATE_KEY
 GEMINI_WRITING_MODEL=gemini-2.5-flash
-GEMINI_LIVE_MODEL=gemini-2.5-flash-native-audio-preview-12-2025
+GEMINI_LIVE_MODEL=gemini-3.1-flash-live-preview
 ```
 
 Django does not automatically load .env for local commands: export variables in your shell or use your deployment secret manager. Never use NEXT_PUBLIC_ for a provider secret. Rotate keys that were shared in chat or public repositories.
@@ -48,3 +48,30 @@ The pilot sends PCM microphone audio, plays model audio, handles interruptions, 
 ## Validation
 
 21 Django tests pass, including invalid scores, invented evidence, duplicate task output, worker idempotency, quota failure, staff-only voice access and constrained token creation. Frontend TypeScript/build validation is performed separately. End-to-end provider, browser microphone and production load tests remain required.
+
+## Speaking studio (2026-09-13)
+
+Open the Speaking card or the profile's Speaking button. The studio has a static vector examiner avatar, measured microphone waveform, mute/end controls and automatic Part 1 (4 min), preparation (1 min), Part 2 (2 min), Part 3 (4 min) transitions. These are practice timings, not a validated full IELTS exam. Each speaking part uses a fresh one-use, five-minute token.
+
+Microphone test runs locally for 15 seconds without sending audio to AI. Speaker test plays a short tone. Use localhost or HTTPS and grant microphone permission. AI conversation sends audio directly to Google; transcriptions are hidden until practice ends, held only in browser memory and cleared on leaving. Recording persistence, band scoring, error feedback and lip-synced video are not implemented.
+
+Staff can test when AI_ENABLED=1 and GEMINI_API_KEY is set. Ordinary signed-in accounts additionally require VOICE_PRACTICE_ENABLED=1 (disabled by default). This separate ungraded mode does not grant paid exam access. Token throttling remains enabled. `/api/voice/status/` reports configuration/access without secrets; it does not perform a live provider health check.
+
+Token requests use documented liveConnectConstraints and a configurable current Live model. Error feedback distinguishes missing configuration, disabled access, provider errors, quota, microphone permission/device problems and timeout. Each socket has a 20-second setup timeout; disconnects stop capture/playback. Live provider and browser verification remain pending.
+
+Start locally from backend (Django does not auto-load .env):
+
+```bash
+source .venv/bin/activate
+export DJANGO_DEBUG=1
+export AI_ENABLED=1
+export GEMINI_LIVE_MODEL=gemini-3.1-flash-live-preview
+export GEMINI_API_KEY="$(python -c 'import getpass; print(getpass.getpass("Gemini API key: "))')"
+python manage.py runserver 8001
+```
+
+The key prompt is hidden; its value is not put into shell history. Do not paste keys into chat. Enable the optional student flag only when student practice should call your provider account.
+
+References checked:
+- https://ai.google.dev/gemini-api/docs/live-api/ephemeral-tokens
+- https://ai.google.dev/api/live

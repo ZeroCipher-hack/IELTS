@@ -35,4 +35,6 @@ if os.getenv('DJANGO_TRUST_PROXY')=='1':
 AI_ENABLED=os.getenv('AI_ENABLED','0')=='1'
 GEMINI_API_KEY=os.getenv('GEMINI_API_KEY','')
 GEMINI_WRITING_MODEL=os.getenv('GEMINI_WRITING_MODEL','gemini-2.5-flash')
-GEMINI_LIVE_MODEL=os.getenv('GEMINI_LIVE_MODEL','gemini-2.5-flash-native-audio-preview-12-2025')
+GEMINI_LIVE_MODEL=os.getenv('GEMINI_LIVE_MODEL','gemini-3.1-flash-live-preview')
+
+VOICE_PRACTICE_ENABLED=os.getenv('VOICE_PRACTICE_ENABLED','0')=='1'
