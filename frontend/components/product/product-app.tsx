@@ -10,8 +10,8 @@ import ThemeToggle from './theme-toggle';
 import LoadingSkeleton from './loading-skeleton';
 import AnalyticsDashboard from './analytics-dashboard';
 type View='dashboard'|'tests'|'results'|'plan'|'profile'|'payments'|'analytics'|'speaking';
-export default function ProductApp(){
- const [user,setUser]=useState<User|null>(null),[language,setLanguage]=useState<Language>('uz'),[view,setView]=useState<View>('dashboard'),[ready,setReady]=useState(false),[available,setAvailable]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[register,setRegister]=useState(false),[exams,setExams]=useState<Exam[]>([]),[history,setHistory]=useState<Attempt[]>([]),[free,setFree]=useState(false),[active,setActive]=useState<Attempt|null>(null);
+export default function ProductApp({initialRegister=false}:{initialRegister?:boolean}){
+ const [user,setUser]=useState<User|null>(null),[language,setLanguage]=useState<Language>('uz'),[view,setView]=useState<View>('dashboard'),[ready,setReady]=useState(false),[available,setAvailable]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[register,setRegister]=useState(initialRegister),[exams,setExams]=useState<Exam[]>([]),[history,setHistory]=useState<Attempt[]>([]),[free,setFree]=useState(false),[active,setActive]=useState<Attempt|null>(null);
  const [catalogLoading,setCatalogLoading]=useState(true),[historyLoading,setHistoryLoading]=useState(true);
  const t=copy[language];
  const [purchase,setPurchase]=useState('IELTS Academic'),[sectionFilter,setSectionFilter]=useState('All');

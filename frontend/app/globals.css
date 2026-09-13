@@ -1,5 +1,47 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@theme inline { --color-navy: var(--navy); --color-navy-foreground: var(--navy-foreground); }
+.landing-page {  --radius: 1rem;
+  --font-sans:
+    Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --background: oklch(0.968 0.012 95);
+  --foreground: oklch(0.29 0.05 258);
+  --card: oklch(0.995 0.005 95);
+  --card-foreground: oklch(0.29 0.05 258);
+  --popover: oklch(0.995 0.005 95);
+  --popover-foreground: oklch(0.29 0.05 258);
+  --primary: oklch(0.52 0.085 197);
+  --primary-foreground: oklch(0.99 0.005 95);
+  --secondary: oklch(0.93 0.014 95);
+  --secondary-foreground: oklch(0.29 0.05 258);
+  --muted: oklch(0.93 0.014 95);
+  --muted-foreground: oklch(0.48 0.025 258);
+  --accent: oklch(0.93 0.02 197);
+  --accent-foreground: oklch(0.34 0.06 200);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.99 0.005 95);
+  --border: oklch(0.89 0.014 95);
+  --input: oklch(0.89 0.014 95);
+  --ring: oklch(0.52 0.085 197);
+  --navy: oklch(0.31 0.055 258);
+  --navy-foreground: oklch(0.97 0.012 95);
+  --chart-1: oklch(0.52 0.085 197);
+  --chart-2: oklch(0.31 0.055 258);
+  --chart-3: oklch(0.65 0.09 197);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.968 0.012 95);
+  --sidebar-foreground: oklch(0.29 0.05 258);
+  --sidebar-primary: oklch(0.52 0.085 197);
+  --sidebar-primary-foreground: oklch(0.99 0.005 95);
+  --sidebar-accent: oklch(0.93 0.014 95);
+  --sidebar-accent-foreground: oklch(0.29 0.05 258);
+  --sidebar-border: oklch(0.89 0.014 95);
+  --sidebar-ring: oklch(0.52 0.085 197);
+ color-scheme: light; font-family: var(--font-sans); line-height:1.5;
+}
+.landing-page .hero-surface { background:radial-gradient(1100px 480px at 78% -10%, #087f831c, transparent 70%),var(--background); }
+.landing-page section[id] { scroll-margin-top:90px; }
 
 /* Tokens: teal is the only decorative accent; red communicates errors. */
 :root {
@@ -39,6 +81,7 @@ html[data-theme="dark"] {
 }
 
 /* Base typography and controls. Negative tracking is reserved for h1 >= 32px. */
+@scope (:root) to (.landing-page) {
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--background); color: var(--foreground); font: 16px/1.6 Arial, Helvetica, sans-serif; }
 h1,h2,h3,h4,p { margin: 0; }
@@ -54,6 +97,7 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible { outline: 3px solid var(--ring); outline-offset: 4px; }
 input,select,textarea { border: 1px solid var(--input); border-radius: 8px; background: var(--card); color: var(--foreground); padding: var(--space-3); min-width: 0; }
 textarea { width: 100%; resize: vertical; }
+}
 .primary,.secondary,.text-button { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: 44px; border-radius: 12px; font-size: 14px; font-weight: 500; }
 .primary,.secondary { padding: var(--space-3) var(--space-6); border: 1px solid var(--border); }
 .primary { background: var(--primary); border-color: var(--primary); color: var(--primary-foreground); }

@@ -1,2 +1,2 @@
-import ProductApp from '@/components/product/product-app';
-export default function Page(){return <ProductApp/>}
+import Landing from '@/components/landing/landing';
+export default function Page(){return <Landing/>}
