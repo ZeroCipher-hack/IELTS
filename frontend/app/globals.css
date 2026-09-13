@@ -43,7 +43,7 @@
 .landing-page .hero-surface { background:radial-gradient(1100px 480px at 78% -10%, #087f831c, transparent 70%),var(--background); }
 .landing-page section[id] { scroll-margin-top:90px; }
 
-/* Tokens: teal is the only decorative accent; red communicates errors. */
+/* Teal brand with blue, violet and amber skill accents; red remains for errors. */
 :root {
   color-scheme: light;
   --background: #f6f7f7; --foreground: #243334; --card: #ffffff;
@@ -57,6 +57,10 @@
   --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
   --space-6: 24px; --space-8: 32px; --space-12: 48px;
   --shadow-interactive: 0 8px 24px #087f831a;
+  --skill-listening: #087f83;
+  --skill-reading: #2563c4;
+  --skill-writing: #8052bd;
+  --skill-speaking: #a76410;
 }
 html[data-theme="dark"] {
   color-scheme: dark;
@@ -361,3 +365,49 @@ progress::-moz-progress-bar { background: var(--primary); }
 .speaking-transcript>div { padding:var(--space-4) 0; border-bottom:1px solid var(--border); }
 .speaking-transcript p { white-space:pre-wrap; overflow-wrap:anywhere; }
 @media(max-width:767px) { .speaking-layout { grid-template-columns:1fr; } .examiner-portrait { max-width:280px; } .voice-wave { gap:3px; } }
+
+/* Skill colors shared by marketing and student screens. */
+.skill-listening,.landing-page #features article:nth-child(1) { --skill-color:var(--skill-listening); }
+.skill-reading,.landing-page #features article:nth-child(2) { --skill-color:var(--skill-reading); }
+.skill-writing,.landing-page #features article:nth-child(3) { --skill-color:var(--skill-writing); }
+.skill-speaking,.landing-page #features article:nth-child(4) { --skill-color:var(--skill-speaking); }
+.skill-action,.exam-card,.landing-page #features article {
+  border-top:3px solid var(--skill-color,var(--primary));
+  background:linear-gradient(145deg,color-mix(in srgb,var(--skill-color,var(--primary)) 7%,var(--card)),var(--card) 72%);
+}
+.skill-action .skill-icon,.exam-card .skill-icon,.landing-page #features article>span {
+  color:var(--skill-color); background:color-mix(in srgb,var(--skill-color) 13%,var(--card));
+}
+.skill-action .skill-cta { color:var(--skill-color); }
+.target-card {
+  border-color:color-mix(in srgb,var(--skill-writing) 28%,var(--border));
+  background:linear-gradient(130deg,color-mix(in srgb,var(--skill-writing) 12%,var(--card)),var(--card));
+}
+.target-card>svg,.target-card>strong { color:var(--skill-writing); }
+.latest-result { border-top:3px solid var(--primary); }
+.landing-page #how li:nth-child(2)>span { background:#eaf0ff; color:#2563c4; }
+.landing-page #how li:nth-child(3)>span { background:#f1eafa; color:#8052bd; }
+.landing-page .hero-surface {
+  background:radial-gradient(ellipse at 85% 20%,#8052bd17,transparent 55%),radial-gradient(ellipse at 5% 90%,#087f831c,transparent 60%),var(--background);
+}
+.landing-page .hero-surface li:nth-child(2) .h-2.bg-primary { background:var(--skill-reading); }
+.landing-page .hero-surface li:nth-child(3) .h-2.bg-primary { background:var(--skill-writing); }
+.primary,.secondary,.header-navigation button,.header-profile,.landing-page a,.landing-page button {
+  transition:background-color .18s,color .18s,box-shadow .18s,transform .18s;
+}
+.landing-page :is(a,button):focus-visible { outline:3px solid var(--primary); outline-offset:4px; }
+.skill-action:focus-visible { border-color:var(--skill-color); box-shadow:0 8px 24px color-mix(in srgb,var(--skill-color) 20%,transparent); }
+@media (hover:hover) and (pointer:fine) {
+  .skill-action:hover { border-color:var(--skill-color); box-shadow:0 12px 28px color-mix(in srgb,var(--skill-color) 20%,transparent); }
+  .primary:not(:disabled):hover,.landing-page a.bg-primary:hover { transform:translateY(-2px); box-shadow:0 8px 20px #087f8330; }
+  .secondary:not(:disabled):hover { border-color:var(--primary); background:var(--accent); }
+  .header-navigation button:hover { color:var(--accent-foreground); background:var(--accent); }
+  .landing-page nav a:hover { color:var(--primary); }
+}
+html[data-theme="dark"] .skill-action,html[data-theme="dark"] .exam-card,html[data-theme="dark"] .target-card {
+  --skill-reading:#8ab4ff; --skill-writing:#c4a3f5; --skill-speaking:#edbb70; --skill-listening:#6bd2cc;
+}
+@media (prefers-reduced-motion:reduce) {
+  .primary,.secondary,.header-navigation button,.header-profile,.landing-page a,.landing-page button { transition:none; }
+  .primary:not(:disabled):hover,.landing-page a.bg-primary:hover { transform:none; }
+}
