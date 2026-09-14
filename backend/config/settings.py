@@ -1,6 +1,10 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 BASE_DIR=Path(__file__).resolve().parent.parent
+# Explicit path: management commands and workers load the same local settings.
+# Deployment environment variables retain priority over local files.
+load_dotenv(BASE_DIR / '.env', override=False, interpolate=False)
 DEBUG=os.getenv('DJANGO_DEBUG','0')=='1'
 SECRET_KEY=os.getenv('DJANGO_SECRET_KEY','')
 if not SECRET_KEY:

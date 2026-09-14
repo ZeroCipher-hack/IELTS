@@ -78,3 +78,22 @@ References checked:
 
 
 Voice transport: ephemeral tokens connect through v1alpha.GenerativeService.BidiGenerateContentConstrained with access_token, matching googleapis/js-genai src/live.ts. Token creation remains REST v1beta/auth_tokens. The examiner is Nova, a vector character. Its mouth responds to output audio amplitude through an AnalyserNode; this is not phoneme-based lip synchronization. Reduced-motion preferences disable mouth motion and blinking. Live verification is still required.
+
+
+## Persistent local configuration
+
+Install backend requirements, then save local settings in `backend/.env`:
+
+```dotenv
+DJANGO_DEBUG=1
+AI_ENABLED=1
+VOICE_PRACTICE_ENABLED=1
+GEMINI_LIVE_MODEL=gemini-3.1-flash-live-preview
+GEMINI_API_KEY=your-key-here
+```
+
+Use your existing key, not a new key for each launch. This file is ignored by Git.
+Run `chmod 600 .env` in backend after saving. Restart Django after changing it.
+The file is read automatically before settings, without variable interpolation.
+Existing exported variables take priority; use a fresh terminal or unset old AI exports if they conflict.
+After setup: `source .venv/bin/activate` and `python manage.py runserver 8001`.
