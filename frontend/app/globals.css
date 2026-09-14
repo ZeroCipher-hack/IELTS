@@ -431,3 +431,6 @@ html[data-theme="dark"] .skill-action,html[data-theme="dark"] .exam-card,html[da
 html[data-theme="dark"] .examiner-character { background:radial-gradient(ellipse at 50% 40%,#365e69,#172d43 75%); border-color:#476777; }
 @keyframes nova-blink { 0%,44%,48%,100% { transform:scaleY(1); } 46% { transform:scaleY(.08); } }
 @media(prefers-reduced-motion:reduce) { .character-eyes { animation:none; } .character-mouth { transform:none; } }
+
+.voice-consent { display:flex; gap:12px; align-items:flex-start; max-width:560px; font-size:14px; }
+.voice-consent input { margin-top:5px; flex-shrink:0; }

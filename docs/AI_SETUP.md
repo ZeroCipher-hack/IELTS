@@ -97,3 +97,32 @@ Run `chmod 600 .env` in backend after saving. Restart Django after changing it.
 The file is read automatically before settings, without variable interpolation.
 Existing exported variables take priority; use a fresh terminal or unset old AI exports if they conflict.
 After setup: `source .venv/bin/activate` and `python manage.py runserver 8001`.
+
+## Speaking feedback and history
+
+Update requirements, run `python manage.py migrate`, and run the assessment worker
+in a separate terminal: `python manage.py assess_pending --watch`.
+The server and worker both read backend/.env. Without the worker results remain pending.
+Speaking practice access is still controlled by staff status / VOICE_PRACTICE_ENABLED;
+this feature does not enable paid Speaking exams or validated official scores.
+
+On the Speaking screen, consent to audio assessment, start a new conversation,
+finish, then click Assess and save result. The browser records microphone audio
+per connected part (WebM/Opus, Ogg or MP4 when supported); no recording during prep.
+At most three segments / 10 MB can be submitted. Upload is authenticated,
+CSRF-protected and idempotent. Audio is stored privately in the database pending
+assessment, not exposed by result/history APIs. The worker deletes it after success
+or terminal failure. If the worker is stopped, pending audio stays in the database.
+Reports and candidate transcripts remain in the account's existing result history.
+
+The worker sends the audio and candidate transcript to GEMINI_WRITING_MODEL
+(default gemini-2.5-flash, also used for asynchronous assessment). It validates
+four equal-weight criterion scores and exact transcript evidence. Insufficient
+speech returns a failed assessment instead of an invented band. Partial sessions
+are labelled recorded practice, not full IELTS exams. Reports include strengths,
+feedback, exact quotes, improved examples preserving meaning, and a weekly plan.
+Model accuracy and real microphone/provider compatibility need live calibration;
+a successful unit test/build does not establish examiner-level grading quality.
+
+Avatar check: the current screen displays NOVA / VOICE AVATAR · v2. If an old
+portrait remains after pulling, restart the frontend and hard-refresh the browser.

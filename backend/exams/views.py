@@ -88,6 +88,7 @@ def payload(a,include_questions=True):
     if a.state=='awaiting_assessment':
         from .gemini import configured
         job=AssessmentJob.objects.filter(attempt=a).first()
+        data['assessment_error']=job.error_code if job else ''
         data['assessment_status']=('disabled' if not configured() else job.state if job else 'pending')
     if include_questions:
         data.update({'passage':snap['passage'],'audio_url':snap.get('audio_url',''),'questions':[{k:v for k,v in q.items() if k not in ['accepted_answers','evidence','explanation']} for q in snap['questions']]})
@@ -213,3 +214,44 @@ def analytics(request):
     response=JsonResponse(student_analytics(request.user))
     response['Cache-Control']='private, no-store'
     return response
+
+@endpoint(['POST'])
+def speaking_submit(request):
+    import base64,uuid
+    from .voice import access
+    from .models import SpeakingRecording
+    state=access(request.user)
+    if not state['allowed']:return error('VOICE_PRACTICE_DISABLED',403)
+    if not state['configured']:return error('AI_NOT_CONFIGURED',503)
+    try: identifier=uuid.UUID(request.POST.get('id',''))
+    except (ValueError,TypeError):return error('Submission ID required.')
+    previous=Attempt.objects.filter(pk=identifier,user=request.user).first()
+    if previous:return JsonResponse(payload(previous))
+    if request.POST.get('consent')!='yes':return error('Audio assessment consent required.')
+    transcript=request.POST.get('transcript','').strip()
+    if not 20<=len(transcript)<=60000:return error('Kamida bitta mazmunli javob yozib oling. / Record a meaningful answer.')
+    files=request.FILES.getlist('audio')
+    if not 1<=len(files)<=3 or sum(f.size for f in files)>10*1024*1024:return error('Audio limit: 3 segments / 10 MB.')
+    segments=[]
+    for f in files:
+        mime=f.content_type.split(';')[0]
+        raw=f.read()
+        valid=(mime=='audio/webm' and raw.startswith(b'\x1aE\xdf\xa3')) or (mime=='audio/ogg' and raw.startswith(b'OggS')) or (mime=='audio/mp4' and raw[4:8]==b'ftyp')
+        if not valid or len(raw)<100:return error('Unsupported or empty audio.')
+        segments.append({'mime':mime,'data':base64.b64encode(raw).decode()})
+    if throttle('speaking-submit:'+str(request.user.pk)):return error('AI_RATE_LIMIT',429)
+    with transaction.atomic():
+        get_user_model().objects.select_for_update().get(pk=request.user.pk)
+        previous=Attempt.objects.filter(pk=identifier).first()
+        if previous:
+            if previous.user_id!=request.user.pk:return error('Submission ID unavailable.',409)
+            return JsonResponse(payload(previous))
+        exam=Exam.objects.filter(section='Speaking',title='AI Speaking practice',published=False).first()
+        if not exam:exam=Exam.objects.create(section='Speaking',title='AI Speaking practice',duration_seconds=660)
+        profile,_=Profile.objects.get_or_create(user=request.user)
+        snap={'title':'Speaking · AI feedback','section':'Speaking','version':1,'passage':'','audio_url':'',
+            'feedback_language':profile.language,'questions':[{'position':1,'prompt':'Recorded speaking practice','choices':[],'skill_tag':'Speaking'}]}
+        a=Attempt.objects.create(id=identifier,user=request.user,exam=exam,snapshot=snap,answers={'1':transcript},state='awaiting_assessment',deadline=timezone.now(),submitted_at=timezone.now())
+        SpeakingRecording.objects.create(attempt=a,segments=segments)
+        AssessmentJob.objects.create(attempt=a)
+    return JsonResponse(payload(a),status=201)

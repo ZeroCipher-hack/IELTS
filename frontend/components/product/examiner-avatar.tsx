@@ -31,6 +31,6 @@ export default function ExaminerAvatar({faceRef,speaking,listening,label}:{faceR
    <path d="M331 184v43q0 23-42 23" fill="none" stroke="#6bcac7" strokeWidth="5" strokeLinecap="round"/><rect x="277" y="245" width="18" height="10" rx="5" fill="#1d5263"/>
    <rect x="323" y="188" width="15" height="29" rx="7" fill="#b7e8df"/><circle cx="330" cy="198" r="3" fill="#188a92"/>
   </svg>
-  <span className="character-name">NOVA <span>AI EXAMINER</span></span>
+  <span className="character-name">NOVA <span>VOICE AVATAR · v2</span></span>
  </div>
 }

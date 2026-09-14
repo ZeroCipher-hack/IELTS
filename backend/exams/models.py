@@ -65,3 +65,8 @@ class AssessmentJob(models.Model):
     available_at=models.DateTimeField(default=timezone.now)
     lease=models.UUIDField(null=True,blank=True)
     error_code=models.CharField(max_length=64,blank=True)
+
+class SpeakingRecording(models.Model):
+    attempt=models.OneToOneField(Attempt,on_delete=models.CASCADE,related_name='speaking_recording')
+    # Private, bounded audio segments. Deleted after successful assessment.
+    segments=models.JSONField(default=list)
