@@ -77,4 +77,4 @@ References checked:
 - https://ai.google.dev/api/live
 
 
-Voice transport: ephemeral tokens connect through v1alpha.GenerativeService.BidiGenerateContentConstrained with access_token, matching googleapis/js-genai src/live.ts. Token creation remains REST v1beta/auth_tokens. The examiner image is the user-supplied static portrait; the border indicates audio playback, not lip synchronization. Live verification is still required.
+Voice transport: ephemeral tokens connect through v1alpha.GenerativeService.BidiGenerateContentConstrained with access_token, matching googleapis/js-genai src/live.ts. Token creation remains REST v1beta/auth_tokens. The examiner is Nova, a vector character. Its mouth responds to output audio amplitude through an AnalyserNode; this is not phoneme-based lip synchronization. Reduced-motion preferences disable mouth motion and blinking. Live verification is still required.
