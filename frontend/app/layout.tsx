@@ -17,7 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="uz" suppressHydrationWarning>
-      <body className="antialiased"><script dangerouslySetInnerHTML={{__html: `(function(){try{var t=localStorage.getItem('ieltsqa-theme-v1');document.documentElement.dataset.theme=t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'}catch(e){document.documentElement.dataset.theme='light'}})()`}}/>{children}</body>
+      <body className="antialiased"><script dangerouslySetInnerHTML={{__html: `(function(){try{var t=localStorage.getItem('ieltsqa-theme-v2');document.documentElement.dataset.theme=t==='dark'?'dark':'light'}catch(e){document.documentElement.dataset.theme='light'}})()`}}/>{children}</body>
     </html>
   );
 }

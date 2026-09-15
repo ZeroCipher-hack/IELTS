@@ -5,7 +5,7 @@
  --primary:#c83b28; --primary-hover:#ad2e1d; --primary-foreground:#fff;
  --accent:#ffeadc; --accent-foreground:#ad321f; --input:#d7cbbb; --ring:#bc3623;
  --destructive:#a62525; --error-surface:#fff0ef;
- --skill-listening:#c83b28; --skill-reading:#996217; --skill-writing:#ac493c; --skill-speaking:#9b5725;
+ --skill-listening:#c83b28; --skill-reading:#c83b28; --skill-writing:#c83b28; --skill-speaking:#c83b28;
  --shadow-interactive:0 8px 0 #ead8bf;
  --peach:#ffe8d9; --butter:#fff0c5; --display-accent:#cd3c28;
  background:var(--background); color:var(--foreground); min-height:100dvh;
