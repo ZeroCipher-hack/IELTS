@@ -1,8 +1,8 @@
 "use client";
 
+import Image from 'next/image';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { ArrowUpRight, ArrowRight, AudioLines, Headphones, BookOpen, PenLine, Mic, CalendarCheck, Target, Pause, Play } from 'lucide-react';
-import ExaminerAvatar from '../product/examiner-avatar';
 import { copy } from './refresh-copy';
 import s from './landing.module.css';
 
@@ -18,7 +18,6 @@ export default function Landing() {
   const [lang, setLang] = useState<(typeof languages)[number]>('uz');
   const [paused, setPaused] = useState(false);
   const root = useRef<HTMLDivElement>(null);
-  const face = useRef<HTMLDivElement>(null);
   const c = copy[lang];
 
   useEffect(() => {
@@ -57,7 +56,7 @@ export default function Landing() {
       <section className={s.speaking} data-reveal>
         <div className={s.conversation} data-paused={paused}>
           <div className={s.previewHeader}><span>{c.preview}</span><span>PART 1</span></div>
-          <div className={s.avatar}><ExaminerAvatar faceRef={face} speaking={false} listening={false} label="Nova — AI examiner"/></div>
+          <div className={s.avatar}><Image src="/examiner-landing-v2.webp" alt="Nova — IELTSQA AI speaking examiner" fill sizes="(max-width: 760px) 90vw, 44vw"/></div>
           <div className={s.waveRow}><Mic aria-hidden="true"/><div className={s.wave} aria-hidden="true">{Array.from({length:32}, (_, i) => <i key={i} style={{'--height':`${8 + ((i * 17) % 32)}px`, '--delay':`${i * -0.13}s`} as CSSProperties}/>)}</div><button type="button" onClick={() => setPaused(p => !p)} aria-label={paused ? c.play : c.pause}>{paused ? <Play aria-hidden="true"/> : <Pause aria-hidden="true"/>}</button></div>
           <p className={s.transcript} lang="en"><b>NOVA</b>What do you enjoy about where you live?</p><p className={s.note}>{c.previewNote}</p>
         </div>

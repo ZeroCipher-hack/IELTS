@@ -7,3 +7,12 @@
 @media(max-width:1150px){.scoreGrid{grid-template-columns:1fr}.ring{margin:auto}.skills{grid-template-columns:repeat(2,1fr)}.header nav{gap:16px}.hero{gap:24px}.speaking,.feedback{gap:32px}}
 @media(max-width:760px){.page.page{padding:0 20px}.header{min-height:80px;flex-wrap:wrap;gap:8px;padding:16px 0}.header nav{order:3;width:100%;justify-content:center;padding-top:8px}.headerActions{gap:8px}.logo{font-size:22px}.logo svg{width:28px;height:28px}.login{padding:8px 12px;font-size:13px}.languages button{padding:8px 6px;font-size:12px}.hero{grid-template-columns:1fr;padding:32px 0 40px;gap:32px}.page h1{font-size:44px;letter-spacing:-1.4px}.intro{font-size:17px}.scoreGrid{grid-template-columns:128px 1fr;gap:12px}.ring{width:128px}.report{padding:20px;box-shadow:5px 5px 0 #fae9cc}.scores li{grid-template-columns:18px 1fr 28px}.track{display:none}.skills{gap:12px}.skill{padding:16px 12px;gap:8px}.skill>svg:first-child{width:24px}.skill>svg:last-child{display:none}.skill h3{font-size:16px}.speaking,.feedback{grid-template-columns:1fr;gap:24px}.speaking>div:last-child{grid-row:1}.conversation{max-width:520px;width:100%;margin:auto}.section{padding:32px 0}.steps{grid-template-columns:1fr;gap:24px}.plan{flex-wrap:wrap}.plan span{border:0;padding:0;width:100%}.footer{flex-direction:column;align-items:flex-start;gap:16px}.actions{gap:16px}.status{padding:24px}.finalCta{padding:40px 20px}.example{padding:20px}}
 @media(prefers-reduced-motion:reduce){.page *, .page *:before,.page *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.waiting{opacity:1;transform:none}.page .cta:hover,.skill:hover{transform:none}}
+
+/* Human examiner treatment: the marketing page must look like a real product, not a toy avatar demo. */
+.speaking{grid-template-columns:1.05fr .95fr;gap:72px;padding:48px 0 72px}
+.conversation{position:relative;border-color:#2c2d28;padding:18px;box-shadow:10px 10px 0 #fae0c9}
+.previewHeader{font-weight:800}
+.avatar{position:relative;height:300px;margin-top:14px;background:#f9e4ce}
+.avatar img{object-fit:cover;object-position:center 42%}
+.waveRow button{border:1px solid #f3d4c2}
+@media(max-width:760px){.speaking{grid-template-columns:1fr;gap:32px;padding:32px 0 48px}.avatar{height:260px}.conversation{box-shadow:6px 6px 0 #fae0c9}}
