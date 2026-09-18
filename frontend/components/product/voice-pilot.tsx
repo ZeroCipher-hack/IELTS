@@ -31,13 +31,14 @@ export default function VoicePilot({language='uz',onBack,onSubmitted}:{language?
   NO_AUDIO:say('AI ulandi, lekin ovoz yubormadi. Model va API limitini tekshiring.','AI connected but sent no audio. Check the model and API quota.','ИИ подключён, но аудио не поступило. Проверьте модель и лимит API.'),
   AUDIO:say('AI audiosini o‘qishda xato yuz berdi.','The AI audio response could not be decoded.','Не удалось обработать аудио ИИ.')};return errors[code]||say('Ulanish xatosi. Mikrofon, internet va server sozlamalarini tekshiring.','Connection failed. Check microphone, network and server settings.','Ошибка подключения. Проверьте микрофон, сеть и сервер.');}
  async function check(){setError('');try{setStatus(await api<Status>('voice/status/'))}catch(e){setError(message((e as Error).message))}}
+ // Voice statusni mountda bir marta yuklash — fetch on mount, cleanup da generatsiyani oshirish intentional
  useEffect(()=>{let alive=true;api<Status>('voice/status/').then(s=>{if(alive)setStatus(s)}).catch(()=>{if(alive)setError(say('Serverga ulanib bo‘lmadi.','Could not reach the server.','Не удалось подключиться к серверу.'))});return()=>{alive=false;generation.current++;release.current()}},[]);
  function cleanup(){generation.current++;release.current();release.current=()=>{};socketRef.current=null;streamRef.current=null;guard.current=false;setSpeaking(false);setAudioBlocked(false);audioRef.current=null;setLevel(0);setMuted(false);mutedRef.current=false}
  function stop(){cleanup();setPhase('done');setTranscript([...entries.current]);setSeconds(0)}
  function fail(code:string){cleanup();setPhase('error');setError(message(code));setTranscript([...entries.current])}
  function append(role:Entry['role'],text:string){if(!text)return;const all=entries.current;if(all.reduce((n,e)=>n+e.text.length,0)>60000)return;const last=all[all.length-1];if(last?.role===role)last.text+=text;else all.push({role,text})}
- function next(){if(phase==='part1'){cleanup();setPart(2);deadline.current=Date.now()+60000;setSeconds(60);setPhase('prepare')}else if(phase==='prepare'){void connect(2)}else if(phase==='part2'){void connect(3)}else stop()}
- advance.current=next;
+ // Phase bo'yicha keyingi bosqichga o'tish — advance ref ni phase bilan sinxronlash, connect/stop barqaror ref orqali chaqiriladi
+ useEffect(()=>{advance.current=()=>{if(phase==='part1'){cleanup();setPart(2);deadline.current=Date.now()+60000;setSeconds(60);setPhase('prepare')}else if(phase==='prepare'){void connect(2)}else if(phase==='part2'){void connect(3)}else stop()}},[phase]);
  useEffect(()=>{if(!['part1','prepare','part2','part3','mic-test'].includes(phase))return;const tick=()=>{const n=Math.max(0,Math.ceil((deadline.current-Date.now())/1000));setSeconds(n);if(!n){if(phase==='mic-test'){cleanup();setPhase('idle')}else advance.current()}};tick();const timer=setInterval(tick,250);return()=>clearInterval(timer)},[phase]);
  useEffect(()=>{if(!active)return;const before=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue=''};window.addEventListener('beforeunload',before);return()=>window.removeEventListener('beforeunload',before)},[active]);
  async function connect(selectedPart:number,localOnly=false){

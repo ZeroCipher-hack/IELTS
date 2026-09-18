@@ -29,6 +29,7 @@ export default function ProductApp({initialRegister=false}:{initialRegister?:boo
   const failure=outcomes.find(r=>r.status==='rejected');if(failure?.status==='rejected')throw failure.reason;
  },[]);
  const connect=useCallback(async()=>{setReady(false);setError('');try{const s=await api<{user:User|null}>('session/');setAvailable(true);setUser(s.user);if(s.user){setLanguage(s.user.language);void load().catch(e=>setError((e as Error).message))}}catch(e){setAvailable(false);setError((e as Error).message)}finally{setReady(true)}},[load]);
+ // Mountda sessiyani yuklash — fetch on mount pattern, intentional
  useEffect(()=>{void connect()},[connect]);
  useEffect(()=>{document.documentElement.lang=language},[language]);
  async function uploadAvatar(file:File){
@@ -45,12 +46,14 @@ export default function ProductApp({initialRegister=false}:{initialRegister?:boo
  function navigate(v:View){setView(v);setActive(null);window.scrollTo(0,0)}
  async function open(a:Attempt){await run(async()=>{setActive(await api<Attempt>(`attempts/${a.id}/`))})}
  async function start(exam:Exam){if(!free&&!exam.has_access&&!history.some(a=>a.state==='in_progress'&&a.section===exam.section&&a.title===exam.title)){checkout(exam.title);return}const writing=exam.section==='Writing';if(writing&&!window.confirm(t.writingNotice))return;await run(async()=>{setActive(await api<Attempt>('attempts/','POST',{exam_id:exam.id,accept_pending_assessment:writing}));await load()})}
+ // Baholash kutilayotganda polling — faqat kerakli maydonlar o'zgarganda yangilanadi
+ const pollingId=active?.id,pollingState=active?.state,pollingStatus=active?.assessment_status;
  useEffect(()=>{
-  if(!active||active.state!=='awaiting_assessment'||active.assessment_status==='failed'||active.assessment_status==='disabled')return;
+  if(!pollingId||pollingState!=='awaiting_assessment'||pollingStatus==='failed'||pollingStatus==='disabled')return;
   let alive=true,pending=false;
-  const id=setInterval(()=>{if(pending)return;pending=true;api<Attempt>(`attempts/${active.id}/`).then(a=>{if(!alive)return;setActive(a);if(a.state==='graded')void load(true).catch(()=>{})}).catch(()=>{}).finally(()=>{pending=false})},5000);
+  const id=setInterval(()=>{if(pending)return;pending=true;api<Attempt>(`attempts/${pollingId}/`).then(a=>{if(!alive)return;setActive(a);if(a.state==='graded')void load(true).catch(()=>{})}).catch(()=>{}).finally(()=>{pending=false})},5000);
   return()=>{alive=false;clearInterval(id)};
- },[active?.id,active?.state,active?.assessment_status,load]);
+ },[pollingId,pollingState,pollingStatus,load]);
 
  const graded=history.filter(a=>a.state==='graded'&&a.result),latest=graded[0],inExam=active?.state==='in_progress'||view==='speaking';
  const status=(a:Attempt)=>a.state==='graded'?t.graded:a.state==='in_progress'?t.progress:t.pending;
