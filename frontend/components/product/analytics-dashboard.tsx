@@ -14,6 +14,7 @@ const labels={
 export default function AnalyticsDashboard({language,onOpen,busy}:{language:Language;onOpen:(id:string)=>void;busy:boolean}){
  const [modules,setModules]=useState<Module[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[retry,setRetry]=useState(0);
  const t=labels[language];
+ // Analytics ma'lumotlarini yuklash — retry o'zgarganda fetch, mountda bir marta ham ishlaydi
  useEffect(()=>{let alive=true;setLoading(true);setError('');api<{modules:Module[]}>('analytics/').then(data=>{if(alive)setModules(data.modules)}).catch(e=>{if(alive)setError(e.message)}).finally(()=>{if(alive)setLoading(false)});return()=>{alive=false}},[retry]);
  if(loading)return <LoadingSkeleton label={t.loading}/>;
  return <><div className="page-heading"><div><h1>{t.title}</h1><p>{t.note}</p></div><TrendingUp size={28}/></div>{error?<div className="product-alert" role="alert">{error}<button className="secondary" onClick={()=>setRetry(n=>n+1)}>{t.retry}</button></div>:<div className="analytics-grid">{modules.map(module=><ModuleChart key={module.section} module={module} language={language} onOpen={onOpen} busy={busy}/>)}</div>}<p className="product-muted">{t.disclaimer}</p></>;

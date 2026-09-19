@@ -4,6 +4,7 @@ import {Moon,Sun} from 'lucide-react';
 import type {Language} from './api';
 export default function ThemeToggle({language}:{language:Language}){
  const [dark,setDark]=useState(false);
+ // Mountda tashqi tema (document + OS) bilan sinxronlash — intentional
  useEffect(()=>{
   setDark(document.documentElement.dataset.theme==='dark');
   const media=window.matchMedia('(prefers-color-scheme: dark)');

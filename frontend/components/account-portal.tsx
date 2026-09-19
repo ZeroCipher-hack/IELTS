@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { ArrowRight, CheckCircle2, Clock3, LogOut, RefreshCw, UserRound } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 type User={name:string;email:string};
@@ -10,9 +10,10 @@ async function api<T>(path:string,method='GET',data?:unknown):Promise<T>{const r
 export default function AccountPortal(){
  const [ready,setReady]=useState(false),[available,setAvailable]=useState(false),[user,setUser]=useState<User|null>(null),[register,setRegister]=useState(false),[error,setError]=useState(''),[busy,setBusy]=useState(false),[exams,setExams]=useState<Exam[]>([]),[history,setHistory]=useState<Attempt[]>([]),[free,setFree]=useState(false),[active,setActive]=useState<Attempt|null>(null),[answers,setAnswers]=useState<Record<string,string>>({}),[saveState,setSaveState]=useState(''),[seconds,setSeconds]=useState(0);
  const saving=useRef<Promise<unknown>>(Promise.resolve());
- async function load(){const [cat,list]=await Promise.all([api<{exams:Exam[];free_attempt_available:boolean}>('catalog/'),api<{attempts:Attempt[]}>('attempts/')]);setExams(cat.exams);setFree(cat.free_attempt_available);setHistory(list.attempts)}
- async function connect(){setReady(false);setError('');try{const s=await api<{user:User|null}>('session/');setUser(s.user);setAvailable(true);if(s.user)await load()}catch(e){setAvailable(false);setError((e as Error).message)}finally{setReady(true)}}
- useEffect(()=>{void connect()},[]);
+ const load=useCallback(async()=>{const [cat,list]=await Promise.all([api<{exams:Exam[];free_attempt_available:boolean}>('catalog/'),api<{attempts:Attempt[]}>('attempts/')]);setExams(cat.exams);setFree(cat.free_attempt_available);setHistory(list.attempts)},[]);
+ // Mountda sessiyani bir marta yuklash — fetch on mount pattern, intentional
+ const connect=useCallback(async()=>{setReady(false);setError('');try{const s=await api<{user:User|null}>('session/');setUser(s.user);setAvailable(true);if(s.user)await load()}catch(e){setAvailable(false);setError((e as Error).message)}finally{setReady(true)}},[load]);
+ useEffect(()=>{void connect()},[connect]);
  useEffect(()=>{if(!active||active.state!=='in_progress')return;const tick=()=>setSeconds(Math.max(0,Math.ceil((Date.parse(active.deadline)-Date.now())/1000)));tick();const id=setInterval(tick,1000);return()=>clearInterval(id)},[active]);
  async function run(fn:()=>Promise<void>){setBusy(true);setError('');try{await fn()}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
  async function open(a:Attempt){setActive(a);setAnswers(a.answers);setSaveState('Serverdan yuklandi')}

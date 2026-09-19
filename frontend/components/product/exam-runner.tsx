@@ -7,7 +7,9 @@ export default function ExamRunner({attempt,t,onClose,onComplete}:{attempt:Attem
  const [answers,setAnswers]=useState(attempt.answers),[marks,setMarks]=useState(attempt.review_positions||[]),[saveState,setSaveState]=useState(t.saved),[error,setError]=useState(''),[busy,setBusy]=useState(false),[seconds,setSeconds]=useState(1);
  const revision=useRef(0);
  const values=useRef(attempt.answers),marked=useRef(attempt.review_positions||[]),timer=useRef<ReturnType<typeof setTimeout>|null>(null),queue=useRef<Promise<unknown>>(Promise.resolve()),dirty=useRef(false),submitting=useRef(false),alive=useRef(true),expired=useRef(false);
- const clockOffset=useRef(Date.parse(attempt.server_time)-Date.now());
+ const clockOffset=useRef(0);
+ // Server va client soati orasidagi farqni hisoblash — Date.now faqat effect ichida
+ useEffect(()=>{clockOffset.current=Date.parse(attempt.server_time)-Date.now()},[attempt.server_time]);
  const enqueue=useCallback(()=>{
   if(timer.current)clearTimeout(timer.current);
   if(!dirty.current)return queue.current;
