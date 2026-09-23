@@ -27,6 +27,8 @@ services:
         condition: service_healthy
     volumes:
       - static_files:/app/staticfiles
+    ports:
+      - "8001:8000"
   ai_worker:
     build: ./backend
     restart: unless-stopped
@@ -48,6 +50,8 @@ services:
         BACKEND_URL: http://backend:8000
     restart: unless-stopped
     depends_on: [backend]
+    ports:
+      - "3000:3000"
   proxy:
     image: caddy:2-alpine
     restart: unless-stopped
