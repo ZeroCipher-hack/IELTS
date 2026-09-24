@@ -234,6 +234,29 @@ textarea { width: 100%; resize: vertical; }
 .writing-prompt { margin-top: var(--space-6); }
 .writing-prompt p { white-space: pre-wrap; margin-top: var(--space-4); }
 .essay { height: 320px; margin-top: var(--space-4); line-height: 1.8; }
+
+/* Section branding: Listening/Reading/Writing get their own accent (Speaking uses the same set in voice-pilot). */
+.live-exam.section-listening { --exam-color: var(--skill-listening); }
+.live-exam.section-reading { --exam-color: var(--skill-reading); }
+.live-exam.section-writing { --exam-color: var(--skill-writing); }
+.live-exam { --exam-color: var(--primary); }
+.live-exam .exam-toolbar strong { color: var(--exam-color); text-transform: uppercase; font-size: 13px; letter-spacing: 0.6px; }
+.live-exam .timer { color: var(--exam-color); font-weight: 700; }
+.live-exam .exam-progress progress { accent-color: var(--exam-color); width: 100%; height: 8px; }
+.live-exam .exam-progress progress::-webkit-progress-bar { background: var(--muted); border-radius: 8px; }
+.live-exam .exam-progress progress::-webkit-progress-value { background: var(--exam-color); border-radius: 8px; }
+.live-exam .exam-progress progress::-moz-progress-bar { background: var(--exam-color); border-radius: 8px; }
+.live-exam .exam-progress { border-top: 3px solid var(--exam-color); }
+.live-exam .question-nav button.answered { background: var(--exam-color); border-color: var(--exam-color); }
+.live-exam .question-nav button:focus-visible { outline-color: var(--exam-color); }
+.live-exam .live-options input { accent-color: var(--exam-color); }
+.live-exam .live-options label:has(input:checked) { background: color-mix(in srgb, var(--exam-color) 14%, var(--card)); border: 1px solid var(--exam-color); }
+.live-exam .review-button.marked { background: color-mix(in srgb, var(--exam-color) 18%, var(--card)); color: var(--exam-color); }
+.live-exam .essay:focus { outline-color: var(--exam-color); border-color: var(--exam-color); }
+.live-exam .live-passage { border-top: 3px solid var(--exam-color); }
+.live-exam .primary { background: var(--exam-color); border-color: var(--exam-color); }
+.live-exam .primary:not(:disabled):hover { filter: brightness(0.92); }
+.live-exam .badge[role=status] { background: color-mix(in srgb, var(--exam-color) 16%, var(--card)); color: var(--exam-color); }
 .live-questions>.primary { margin-top: var(--space-6); }
 
 .loading-shell { max-width: 1440px; margin: auto; padding: var(--space-8); }
