@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import { ProductProvider } from "@/components/product/product-context";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -25,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="uz" suppressHydrationWarning className={jakarta.variable}>
-      <body className="antialiased"><script dangerouslySetInnerHTML={{__html: `(function(){try{var t=localStorage.getItem('ieltsqa-theme-v1');document.documentElement.dataset.theme=t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'}catch(e){document.documentElement.dataset.theme='light'}})()`}}/>{children}</body>
+      <body className="antialiased"><script dangerouslySetInnerHTML={{__html: `(function(){try{var t=localStorage.getItem('ieltsqa-theme-v1');document.documentElement.dataset.theme=t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light'}catch(e){document.documentElement.dataset.theme='light'}})()`}}/><ProductProvider>{children}</ProductProvider></body>
     </html>
   );
 }

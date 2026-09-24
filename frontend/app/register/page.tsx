@@ -1,3 +1,2 @@
-import ProductApp from '@/components/product/product-app';
-export default function Page(){return <ProductApp initialRegister/>}
-
+import AuthScreen from '@/components/product/auth-screen';
+export default function Page() { return <AuthScreen mode="register" />; }

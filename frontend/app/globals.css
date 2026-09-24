@@ -151,9 +151,9 @@ textarea { width: 100%; resize: vertical; }
 .header-logout,.theme-toggle { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; color: var(--muted-foreground); }
 .header-logout:hover,.theme-toggle:hover { background: var(--muted); color: var(--foreground); }
 .header-navigation { display: flex; gap: var(--space-2); padding-bottom: var(--space-4); overflow-x: auto; scrollbar-width: thin; }
-.header-navigation button,.test-filters button,.report-filter button { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: 44px; padding: var(--space-2) var(--space-4); border-radius: 12px; font-size: 14px; white-space: nowrap; color: var(--muted-foreground); }
-.header-navigation button:hover,.test-filters button:hover { background: var(--muted); }
-.header-navigation button[aria-current=page],.test-filters button[aria-pressed=true],.report-filter .selected { background: var(--accent); color: var(--accent-foreground); }
+.header-navigation a,.header-navigation button,.test-filters button,.report-filter button { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: 44px; padding: var(--space-2) var(--space-4); border-radius: 12px; font-size: 14px; white-space: nowrap; color: var(--muted-foreground); }
+.header-navigation a:hover,.header-navigation button:hover,.test-filters button:hover { background: var(--muted); }
+.header-navigation a[aria-current=page],.header-navigation button[aria-current=page],.test-filters button[aria-pressed=true],.report-filter .selected { background: var(--accent); color: var(--accent-foreground); }
 .product-footer { margin-top: var(--space-8); padding-top: var(--space-6); border-top: 1px solid var(--border); color: var(--muted-foreground); font-size: 12px; }
 
 .dashboard-summary { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: var(--space-6); margin-bottom: var(--space-8); }
@@ -260,7 +260,7 @@ textarea { width: 100%; resize: vertical; }
   .product-logo { font-size: 20px; }
   .header-profile { padding: var(--space-1); border: 0; }
   .header-profile-copy,.header-profile>svg { display: none; }
-  .header-navigation button { padding: var(--space-2) var(--space-3); font-size: 12px; }
+  .header-navigation a,.header-navigation button { padding: var(--space-2) var(--space-3); font-size: 12px; }
   .page-heading,.section-title { flex-wrap: wrap; align-items: flex-start; }
   .dashboard-summary { grid-template-columns: 1fr 1fr; gap: var(--space-4); }
   .dashboard-summary>.panel:last-child { grid-column: 1/-1; }
@@ -352,7 +352,7 @@ textarea { width: 100%; resize: vertical; }
 }
 .target-card>svg,.target-card>strong { color:var(--skill-writing); }
 .latest-result { border-top:3px solid var(--primary); }
-.primary,.secondary,.header-navigation button,.header-profile,.landing-page a,.landing-page button {
+.primary,.secondary,.header-navigation a,.header-navigation button,.header-profile,.landing-page a,.landing-page button {
   transition:background-color .18s,color .18s,box-shadow .18s,transform .18s;
 }
 .landing-page :is(a,button):focus-visible { outline:3px solid var(--primary); outline-offset:4px; }
@@ -361,14 +361,14 @@ textarea { width: 100%; resize: vertical; }
   .skill-action:hover { border-color:var(--skill-color); box-shadow:0 12px 28px color-mix(in srgb,var(--skill-color) 20%,transparent); }
   .primary:not(:disabled):hover,.landing-page a.bg-primary:hover { transform:translateY(-2px); box-shadow:0 8px 20px #3654e030; }
   .secondary:not(:disabled):hover { border-color:var(--primary); background:var(--accent); }
-  .header-navigation button:hover { color:var(--accent-foreground); background:var(--accent); }
+  .header-navigation a:hover,.header-navigation button:hover { color:var(--accent-foreground); background:var(--accent); }
   .landing-page nav a:hover { color:var(--primary); }
 }
 html[data-theme="dark"] .skill-action,html[data-theme="dark"] .exam-card,html[data-theme="dark"] .target-card {
   --skill-reading:#8ab4ff; --skill-writing:#c4a3f5; --skill-speaking:#edbb70; --skill-listening:#6bd2cc;
 }
 @media (prefers-reduced-motion:reduce) {
-  .primary,.secondary,.header-navigation button,.header-profile,.landing-page a,.landing-page button { transition:none; }
+  .primary,.secondary,.header-navigation a,.header-navigation button,.header-profile,.landing-page a,.landing-page button { transition:none; }
   .primary:not(:disabled):hover,.landing-page a.bg-primary:hover { transform:none; }
 }
 
