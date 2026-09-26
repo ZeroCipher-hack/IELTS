@@ -5,7 +5,7 @@ test.describe('Landing (marketing) sahifasi', () => {
   test('yuklanadi va asosiy elementlar ko‘rinadi', async ({ page }) => {
     const errors = trackConsoleErrors(page);
     await page.goto('/');
-    await expect(page.getByRole('link', { name: /ro‘yxatdan o‘tish|start now|бесплатн/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /bepul urinishni boshlash|start your free attempt|начать бесплатную попытку/i }).first()).toBeVisible();
     errors.assertNone();
   });
 });
