@@ -17,3 +17,8 @@ staticfiles/
 frontend/.sites-runtime/
 .venv/
 node_modules/
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
