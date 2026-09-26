@@ -1,4 +1,5 @@
 'use client';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AudioLines, ArrowRight } from 'lucide-react';
 import { useState } from 'react';
@@ -13,10 +14,11 @@ export default function AuthScreen({ mode }: { mode: 'login' | 'register' }) {
   const [localMode, setLocalMode] = useState(mode);
   const isRegister = localMode === 'register';
 
-  if (user) {
-    router.replace('/dashboard');
-    return null;
-  }
+  useEffect(() => {
+    if (user) router.replace('/dashboard');
+  }, [user, router]);
+
+  if (user) return null;
   if (!ready) return <main className="workspace loading-shell"><LoadingSkeleton label={t.loading} /></main>;
   if (!available) {
     return (

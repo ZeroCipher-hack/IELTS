@@ -191,6 +191,27 @@ textarea { width: 100%; resize: vertical; }
 .payment-methods { display: flex; gap: var(--space-3); }
 .payment-methods span { padding: var(--space-2) var(--space-4); border: 1px solid var(--border); border-radius: 8px; color: var(--muted-foreground); }
 
+/* Natijalar tarixi jadvali (desktop: grid, mobil override yuqorida allaqachon mavjud) */
+.history-table { display: flex; flex-direction: column; }
+.history-table-head,.history-table-row {
+  display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: var(--space-4); align-items: center;
+  padding: var(--space-4) 0; border-bottom: 1px solid var(--border);
+}
+.history-table-head { font-size: 12px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; color: var(--muted-foreground); }
+.history-table-row:last-child { border-bottom: none; }
+.history-table-row div { display: flex; flex-direction: column; gap: 2px; }
+.history-table-row small { color: var(--muted-foreground); }
+
+/* Haftalik reja: kartalar to'ri (desktop) */
+.product-plan { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-6); }
+.plan-day { display: flex; gap: var(--space-4); align-items: flex-start; }
+.plan-number { font-size: 28px; font-weight: 800; color: var(--muted-foreground); line-height: 1; flex-shrink: 0; }
+
+/* Bo'sh holat (natijalar/reja hali yo'q bo'lganda) */
+.empty-workspace { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-3); padding: var(--space-12) var(--space-6); }
+.empty-workspace svg { color: var(--muted-foreground); width: 40px; height: 40px; }
+.empty-workspace p { max-width: 420px; }
+
 .product-login { min-height: 100dvh; max-width: 1200px; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: var(--space-12); padding: var(--space-12) var(--space-8); margin: auto; }
 .login-brand h1 { margin: var(--space-8) 0 var(--space-6); }
 .login-brand select,.login-skills { margin-top: var(--space-6); }
