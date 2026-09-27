@@ -1,6 +1,6 @@
 import json
 from datetime import timedelta
-from django.test import TestCase,Client
+from django.test import TestCase,Client,override_settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .models import Exam,Question,Attempt,Profile
@@ -22,6 +22,20 @@ class ExamFlowTests(TestCase):
         self.assertFalse(self.client.get('/api/catalog/').json()['exams'][0]['has_access'])
         Entitlement.objects.create(user=self.user,exam=self.exam,reference='own-access')
         self.assertTrue(self.client.get('/api/catalog/').json()['exams'][0]['has_access'])
+    @override_settings(EXAMS_OPEN_ACCESS=True)
+    def test_open_access_mode_opens_published_exams_without_consuming_access(self):
+        from .models import Entitlement
+        profile=Profile.objects.get(user=self.user);profile.free_attempt_used=True;profile.save()
+        second=Exam.objects.create(title='Test 2',section='Reading',published=True,duration_seconds=600,passage='Another reading passage.')
+        Question.objects.create(exam=second,position=1,prompt='Another statement',choices=['TRUE','FALSE'],accepted_answers=['FALSE'])
+        catalog=self.client.get('/api/catalog/').json()
+        self.assertTrue(catalog['open_access'])
+        self.assertTrue(all(exam['has_access'] for exam in catalog['exams']))
+        for exam in (self.exam,second):
+            response=self.client.post('/api/attempts/',data=json.dumps({'exam_id':exam.pk}),content_type='application/json')
+            self.assertEqual(response.status_code,201)
+        profile.refresh_from_db();self.assertTrue(profile.free_attempt_used)
+        self.assertFalse(Entitlement.objects.filter(user=self.user,consumed=True).exists())
     def test_display_name_uses_saved_name_not_email(self):
         self.assertEqual(self.client.get('/api/session/').json()['user']['name'],'')
         response=self.client.patch('/api/profile/',data=json.dumps({'name':'Tolqin'}),content_type='application/json')
