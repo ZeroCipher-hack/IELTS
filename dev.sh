@@ -6,6 +6,8 @@ cd "$(dirname "$0")"
 
 BACKEND_PORT="${BACKEND_PORT:-8001}"
 FRONTEND_PORT="${FRONTEND_PORT:-3000}"
+# Local development mode: published exams are open unless explicitly disabled.
+export EXAMS_OPEN_ACCESS="${EXAMS_OPEN_ACCESS:-1}"
 
 echo "==> Backend: virtual muhitni tekshirish..."
 cd backend
