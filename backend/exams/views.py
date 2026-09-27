@@ -82,7 +82,10 @@ def catalog(request):
     profile,_=Profile.objects.get_or_create(user=request.user)
     access=set(Entitlement.objects.filter(user=request.user,consumed=False).values_list('exam_id',flat=True))
     access.update(Attempt.objects.filter(user=request.user,state='in_progress').values_list('exam_id',flat=True))
-    return JsonResponse({'exams':[{**public_exam(e),'has_access':e.id in access} for e in Exam.objects.filter(published=True).prefetch_related('questions')],'free_attempt_available':not profile.free_attempt_used,'payment_enabled':False})
+    exams=Exam.objects.filter(published=True).prefetch_related('questions')
+    if settings.EXAMS_OPEN_ACCESS:
+        access.update(exams.values_list('id',flat=True))
+    return JsonResponse({'exams':[{**public_exam(e),'has_access':e.id in access} for e in exams],'free_attempt_available':True if settings.EXAMS_OPEN_ACCESS else not profile.free_attempt_used,'open_access':settings.EXAMS_OPEN_ACCESS,'payment_enabled':False})
 def payload(a,include_questions=True):
     snap=a.snapshot
     data={'id':str(a.id),'title':snap['title'],'section':snap['section'],'state':a.state,'deadline':a.deadline.isoformat(),'started_at':a.started_at.isoformat(),'answers':a.answers,'review_positions':a.review_positions,'result':a.result,'server_time':timezone.now().isoformat()}
