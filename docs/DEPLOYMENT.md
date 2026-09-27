@@ -4,10 +4,10 @@ The primary frontend now uses real Django accounts and data. `/design` preserves
 
 ## Local
 
-For local testing, the `dev.sh` launcher opens published Reading, Listening and Writing tests by default without consuming the account's free attempt. Close this test mode with `EXAMS_OPEN_ACCESS=0 ./dev.sh`. For a manually started backend, export `EXAMS_OPEN_ACCESS=1` before starting Django. The backend default is closed (`EXAMS_OPEN_ACCESS=0`), including production deployments. Unpublished drafts and the planned full-exam flow are not exposed by this setting. Speaking practice remains gated separately by its AI configuration.
+For local testing, the `dev.sh` launcher opens published Reading, Listening and Writing tests by default without consuming the account's free attempt. Close this test mode with `EXAMS_OPEN_ACCESS=0 ./dev.sh`. For a manually started backend, export `EXAMS_OPEN_ACCESS=1` before starting Django. The backend default is closed (`EXAMS_OPEN_ACCESS=0`), including production deployments. Unpublished drafts stay private. The local sequential practice flow uses published tests; Speaking remains gated by AI configuration. Speaking practice remains gated separately by its AI configuration.
 
 1. Backend: create a virtualenv, install `backend/requirements.txt`.
-2. Set `DJANGO_DEBUG=1`, run `python manage.py migrate`, optionally `python manage.py seed_demo`, then `python manage.py runserver` inside backend.
+2. Set `DJANGO_DEBUG=1`, run `python manage.py migrate` and `python manage.py seed_demo`, then `python manage.py runserver` inside backend. The root `./dev.sh` does these steps automatically.
 3. Frontend: Node 22+, `corepack enable`, `pnpm install --frozen-lockfile`.
 4. Set `BACKEND_URL=http://127.0.0.1:8000`, run `pnpm dev`. Use `--webpack` if a workspace symlink prevents Turbopack from resolving dependencies.
 5. Create staff with `python manage.py createsuperuser`. Access `/admin/`.
@@ -33,7 +33,7 @@ Docker configuration is provided but must be built and exercised on the target s
 
 ## Content workflow
 
-Create an exam draft in Django admin, then add questions. JSON arrays are required for choices and accepted answers, e.g. `["TRUE", "FALSE", "NOT GIVEN"]`. For short answers use empty choices and a list of accepted strings. Writing tasks use empty answer keys. Use HTTPS audio URLs for Listening.
+Create an exam draft in Django admin, then add questions. The root `./dev.sh` automatically seeds original Reading, Listening and Writing practice tests in a local database. For screenshots and the step-by-step Uzbek guide, see [ADDING_TESTS_UZ.md](ADDING_TESTS_UZ.md). JSON arrays are required for choices and accepted answers, e.g. `["TRUE", "FALSE", "NOT GIVEN"]`. For short answers use empty choices and a list of accepted strings. Writing tasks use empty answer keys. Use HTTPS audio URLs for Listening.
 
 Select **Tekshirish va nashr qilish** in the exam list. Invalid drafts are rejected. Published fields cannot be edited in admin; use **Yangi versiyaga nusxalash** to create a new draft. Attempts keep immutable content snapshots.
 
@@ -43,7 +43,7 @@ Bulk import: `python manage.py import_exam /path/to/exam.json`. It validates and
 
 - Speaking realtime conversation and audio-based assessment are unimplemented.
 - Writing responses wait for assessment; rubric calibration and provider worker remain.
-- Full four-section orchestration and combined band calculation remain.
+- A sequential local practice flow exists, but it uses short original sample tests; full-length validated IELTS content and a validated four-skill overall band remain unavailable. Speaking is an optional AI voice practice, not a scored official section.
 - Merchant payment adapter, signed callbacks, refunds and purchase records remain.
 - Full real test materials, rights checks and independently marked benchmark answers remain.
 - Verified email/password recovery and stronger free-attempt abuse prevention remain.
