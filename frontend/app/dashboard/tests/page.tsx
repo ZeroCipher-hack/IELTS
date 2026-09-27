@@ -47,7 +47,8 @@ export default function TestsPage() {
             <span className="badge"><Sparkles size={14} /> {say('SINOV REJIMI', 'TEST MODE', 'РЕЖИМ ТЕСТИРОВАНИЯ')}</span>
             <h2>{t.fullExam}</h2>
             <p>Listening · Reading · Writing · Speaking</p>
-            <p className="availability-note">{say('To‘liq imtihon oqimi hali tayyor emas. Hozir nashr qilingan bo‘lim testlarini alohida topshirib ko‘ring.', 'The full-exam flow is not ready yet. For now, try the published section tests individually.', 'Полный экзамен ещё не готов. Пока пройдите опубликованные тесты по разделам отдельно.')}</p>
+            <p className="availability-note">{say('Nashr qilingan Listening, Reading va Writing testlarini ketma-ket topshiring, so‘ng Speaking mashqini bajaring.', 'Take the published Listening, Reading and Writing tests in sequence, then try the Speaking practice.', 'Пройдите опубликованные тесты Listening, Reading и Writing по порядку, затем выполните Speaking.')}</p>
+          <Link className="primary" href="/dashboard/full-exam">{say('To‘liq imtihonni boshlash', 'Start full exam', 'Начать полный экзамен')} <ArrowRight size={17} /></Link>
           </div>
         </section>
       ) : (
