@@ -104,8 +104,9 @@ class Command(BaseCommand):
             if Exam.objects.filter(title=spec["title"]).exists():
                 self.stdout.write(f"Already exists, kept unchanged: {spec['title']}")
                 continue
-            questions = spec.pop("questions")
-            exam = Exam.objects.create(**spec, published=False)
+            questions = spec["questions"]
+            exam_data = {key: value for key, value in spec.items() if key != "questions"}
+            exam = Exam.objects.create(**exam_data, published=False)
             for position, (prompt, choices, answers, evidence, explanation, skill_tag) in enumerate(questions, 1):
                 Question.objects.create(
                     exam=exam,
