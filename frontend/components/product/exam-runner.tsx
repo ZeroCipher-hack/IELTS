@@ -42,7 +42,6 @@ export default function ExamRunner({attempt,t,onClose,onComplete}:{attempt:Attem
  function change(position:number,value:string){values.current={...values.current,[position]:value};setAnswers(values.current);schedule()}
  function mark(position:number){marked.current=marked.current.includes(position)?marked.current.filter(p=>p!==position):[...marked.current,position];setMarks(marked.current);schedule()}
  async function leave(){setBusy(true);try{await enqueue();onClose()}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
- const syntheticListening=attempt.section==='Listening'&&attempt.audio_url==='browser-tts://passage';
  function toggleSyntheticAudio(){
   if(!('speechSynthesis' in window)){setError('Browser speech playback is unavailable.');return}
   if(window.speechSynthesis.speaking){window.speechSynthesis.cancel();setTtsPlaying(false);return}
