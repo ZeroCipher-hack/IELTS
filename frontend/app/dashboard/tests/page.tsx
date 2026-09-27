@@ -16,13 +16,13 @@ const sections = [
 export default function TestsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t, say, exams, free, history, catalogLoading, busy } = useProduct();
+  const { t, say, exams, free, openAccess, history, catalogLoading, busy } = useProduct();
   const [sectionFilter, setSectionFilter] = useState(searchParams.get('section') || 'All');
 
   if (catalogLoading) return <LoadingSkeleton label={t.loading} view="tests" />;
 
   async function start(exam: (typeof exams)[number]) {
-    if (!free && !exam.has_access && !history.some((a) => a.state === 'in_progress' && a.section === exam.section && a.title === exam.title)) {
+    if (!openAccess && !free && !exam.has_access && !history.some((a) => a.state === 'in_progress' && a.section === exam.section && a.title === exam.title)) {
       router.push(`/dashboard/payments?exam=${encodeURIComponent(exam.title)}`);
       return;
     }
@@ -36,23 +36,34 @@ export default function TestsPage() {
         <div>
           <span className="eyebrow">{say('KEYINGI QADAM', 'YOUR NEXT STEP', 'СЛЕДУЮЩИЙ ШАГ')}</span>
           <h1>{t.tests}</h1>
-          <p>{free ? t.free : t.used}</p>
+          <p>{openAccess ? say('Sinov rejimi: nashr qilingan testlar ochiq.', 'Test mode: published exams are open.', 'Режим тестирования: опубликованные тесты открыты.') : free ? t.free : t.used}</p>
         </div>
         <Link className="secondary" href="/dashboard/results">{t.results}<ArrowRight size={17} /></Link>
       </div>
 
-      <section className="full-test premium-exam">
-        <div>
-          <span className="badge"><Sparkles size={14} /> IELTS ACADEMIC</span>
-          <h2>{t.fullExam}</h2>
-          <p>Listening · Reading · Writing · Speaking</p>
-          <p className="availability-note">{t.fullNote}</p>
-          <span className="premium-price">≈ 200 000 UZS</span>
-        </div>
-        <Link className="secondary" href="/dashboard/payments?exam=IELTS%20Academic">
-          <LockKeyhole size={18} />{say('Mavjudlik holati', 'Availability details', 'Статус доступа')}<ArrowRight size={18} />
-        </Link>
-      </section>
+{openAccess ? (
+        <section className="full-test premium-exam">
+          <div>
+            <span className="badge"><Sparkles size={14} /> {say('SINOV REJIMI', 'TEST MODE', 'РЕЖИМ ТЕСТИРОВАНИЯ')}</span>
+            <h2>{t.fullExam}</h2>
+            <p>Listening · Reading · Writing · Speaking</p>
+            <p className="availability-note">{say('To‘liq imtihon oqimi hali tayyor emas. Hozir nashr qilingan bo‘lim testlarini alohida topshirib ko‘ring.', 'The full-exam flow is not ready yet. For now, try the published section tests individually.', 'Полный экзамен ещё не готов. Пока пройдите опубликованные тесты по разделам отдельно.')}</p>
+          </div>
+        </section>
+      ) : (
+        <section className="full-test premium-exam">
+          <div>
+            <span className="badge"><Sparkles size={14} /> IELTS ACADEMIC</span>
+            <h2>{t.fullExam}</h2>
+            <p>Listening · Reading · Writing · Speaking</p>
+            <p className="availability-note">{t.fullNote}</p>
+            <span className="premium-price">≈ 200 000 UZS</span>
+          </div>
+          <Link className="secondary" href="/dashboard/payments?exam=IELTS%20Academic">
+            <LockKeyhole size={18} />{say('Mavjudlik holati', 'Availability details', 'Статус доступа')}<ArrowRight size={18} />
+          </Link>
+        </section>
+      )}
 
       <div className="test-filters">
         {['All', ...sections.map((s) => s.name)].map((name) => (
@@ -69,13 +80,15 @@ export default function TestsPage() {
             const entries = exams.filter((e) => e.section === name);
             if (entries.length) {
               return entries.map((exam) => {
-                const locked = (!free && !exam.has_access) || name === 'Speaking';
+                const locked = (!openAccess && !free && !exam.has_access) || name === 'Speaking';
                 return (
                   <section className={'panel exam-card skill-' + name.toLowerCase()} key={exam.id}>
                     <div className="exam-card-top">
                       <span className="skill-icon"><Icon size={24} /></span>
                       <span className="access-badge">
-                        {locked ? (
+                        {openAccess && name !== 'Speaking' ? (
+                          say('Sinov uchun ochiq', 'Open for testing', 'Открыто для тестирования')
+                        ) : locked ? (
                           <><LockKeyhole size={13} />{name === 'Speaking' ? say('Ovozli mashq', 'Voice practice', 'Голосовая практика') : say('Pullik', 'Paid', 'Платно')}</>
                         ) : free ? t.free : say('Kirish mavjud', 'Access granted', 'Доступ открыт')}
                       </span>

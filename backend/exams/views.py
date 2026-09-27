@@ -1,6 +1,7 @@
 import hashlib,json
 from datetime import timedelta
 from functools import wraps
+from django.conf import settings
 from django.contrib.auth import authenticate,login,logout,get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
@@ -81,7 +82,10 @@ def catalog(request):
     profile,_=Profile.objects.get_or_create(user=request.user)
     access=set(Entitlement.objects.filter(user=request.user,consumed=False).values_list('exam_id',flat=True))
     access.update(Attempt.objects.filter(user=request.user,state='in_progress').values_list('exam_id',flat=True))
-    return JsonResponse({'exams':[{**public_exam(e),'has_access':e.id in access} for e in Exam.objects.filter(published=True).prefetch_related('questions')],'free_attempt_available':not profile.free_attempt_used,'payment_enabled':False})
+    exams=Exam.objects.filter(published=True).prefetch_related('questions')
+    if settings.EXAMS_OPEN_ACCESS:
+        access.update(exams.values_list('id',flat=True))
+    return JsonResponse({'exams':[{**public_exam(e),'has_access':e.id in access} for e in exams],'free_attempt_available':True if settings.EXAMS_OPEN_ACCESS else not profile.free_attempt_used,'open_access':settings.EXAMS_OPEN_ACCESS,'payment_enabled':False})
 def payload(a,include_questions=True):
     snap=a.snapshot
     data={'id':str(a.id),'title':snap['title'],'section':snap['section'],'state':a.state,'deadline':a.deadline.isoformat(),'started_at':a.started_at.isoformat(),'answers':a.answers,'review_positions':a.review_positions,'result':a.result,'server_time':timezone.now().isoformat()}
@@ -117,11 +121,12 @@ def attempts(request):
         qs=list(exam.questions.values('position','prompt','choices','accepted_answers','evidence','explanation','skill_tag'))
         if exam.section=='Writing' and d.get('accept_pending_assessment') is not True:return error('Writing bahosi AI ulanmaguncha kutilishini tasdiqlang.',409)
         profile,_=Profile.objects.get_or_create(user=request.user)
-        if not profile.free_attempt_used:profile.free_attempt_used=True;profile.save()
-        else:
-            entitlement=Entitlement.objects.select_for_update().filter(user=request.user,exam=exam,consumed=False).first()
-            if not entitlement:return error('Bepul urinish ishlatilgan. To‘lov hali ulanmagan; administrator kirish huquqi bera oladi.',402)
-            entitlement.consumed=True;entitlement.save()
+        if not settings.EXAMS_OPEN_ACCESS:
+            if not profile.free_attempt_used:profile.free_attempt_used=True;profile.save()
+            else:
+                entitlement=Entitlement.objects.select_for_update().filter(user=request.user,exam=exam,consumed=False).first()
+                if not entitlement:return error('Bepul urinish ishlatilgan. To‘lov hali ulanmagan; administrator kirish huquqi bera oladi.',402)
+                entitlement.consumed=True;entitlement.save()
         snapshot={'title':exam.title,'section':exam.section,'version':exam.version,'passage':exam.passage,'audio_url':exam.audio_url,'questions':qs,'feedback_language':profile.language}
         a=Attempt.objects.create(user=request.user,exam=exam,snapshot=snapshot,deadline=timezone.now()+timedelta(seconds=exam.duration_seconds))
     return JsonResponse(payload(a),status=201)
