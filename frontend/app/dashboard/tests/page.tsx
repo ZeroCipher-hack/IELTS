@@ -41,18 +41,29 @@ export default function TestsPage() {
         <Link className="secondary" href="/dashboard/results">{t.results}<ArrowRight size={17} /></Link>
       </div>
 
-      <section className="full-test premium-exam">
-        <div>
-          <span className="badge"><Sparkles size={14} /> IELTS ACADEMIC</span>
-          <h2>{t.fullExam}</h2>
-          <p>Listening · Reading · Writing · Speaking</p>
-          <p className="availability-note">{t.fullNote}</p>
-          <span className="premium-price">≈ 200 000 UZS</span>
-        </div>
-        <Link className="secondary" href="/dashboard/payments?exam=IELTS%20Academic">
-          <LockKeyhole size={18} />{say('Mavjudlik holati', 'Availability details', 'Статус доступа')}<ArrowRight size={18} />
-        </Link>
-      </section>
+{openAccess ? (
+        <section className="full-test premium-exam">
+          <div>
+            <span className="badge"><Sparkles size={14} /> {say('SINOV REJIMI', 'TEST MODE', 'РЕЖИМ ТЕСТИРОВАНИЯ')}</span>
+            <h2>{t.fullExam}</h2>
+            <p>Listening · Reading · Writing · Speaking</p>
+            <p className="availability-note">{say('To‘liq imtihon oqimi hali tayyor emas. Hozir nashr qilingan bo‘lim testlarini alohida topshirib ko‘ring.', 'The full-exam flow is not ready yet. For now, try the published section tests individually.', 'Полный экзамен ещё не готов. Пока пройдите опубликованные тесты по разделам отдельно.')}</p>
+          </div>
+        </section>
+      ) : (
+        <section className="full-test premium-exam">
+          <div>
+            <span className="badge"><Sparkles size={14} /> IELTS ACADEMIC</span>
+            <h2>{t.fullExam}</h2>
+            <p>Listening · Reading · Writing · Speaking</p>
+            <p className="availability-note">{t.fullNote}</p>
+            <span className="premium-price">≈ 200 000 UZS</span>
+          </div>
+          <Link className="secondary" href="/dashboard/payments?exam=IELTS%20Academic">
+            <LockKeyhole size={18} />{say('Mavjudlik holati', 'Availability details', 'Статус доступа')}<ArrowRight size={18} />
+          </Link>
+        </section>
+      )}
 
       <div className="test-filters">
         {['All', ...sections.map((s) => s.name)].map((name) => (
