@@ -1,6 +1,7 @@
 import hashlib,json
 from datetime import timedelta
 from functools import wraps
+from django.conf import settings
 from django.contrib.auth import authenticate,login,logout,get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
