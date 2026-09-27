@@ -73,10 +73,10 @@ function LangSwitcher({
 const skillIcons = [Headphones, BookOpen, PenLine, Mic];
 const whyIcons = [Zap, Target, CalendarCheck, Timer];
 const cardColors = [
-  { bg: "bg-[var(--signal-1)]", fg: "text-white", chip: "bg-white/15" },
-  { bg: "bg-[var(--signal-2)]", fg: "text-white", chip: "bg-white/15" },
-  { bg: "bg-[var(--signal-3)]", fg: "text-[var(--navy)]", chip: "bg-black/10" },
-  { bg: "bg-[var(--signal-4)]", fg: "text-white", chip: "bg-white/15" },
+  { bg: "bg-[#E8F7F3]", fg: "text-navy", chip: "bg-white/75" },
+  { bg: "bg-[#EEF1FF]", fg: "text-navy", chip: "bg-white/75" },
+  { bg: "bg-[#F2EDFF]", fg: "text-navy", chip: "bg-white/75" },
+  { bg: "bg-[#FFF0E8]", fg: "text-navy", chip: "bg-white/75" },
 ];
 
 export default function Landing() {
