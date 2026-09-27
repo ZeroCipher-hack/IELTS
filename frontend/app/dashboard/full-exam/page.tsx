@@ -39,8 +39,8 @@ export default function FullExamPage() {
       <button className="primary" onClick={() => { localStorage.removeItem('ieltsqa-full-exam'); router.push('/dashboard/tests'); }}>{say('Testlar ro‘yxatiga qaytish', 'Back to tests', 'К списку тестов')}</button>
     </section>;
   }
-  const selected = order.map(section => exams.filter(e => e.section === section).sort((a,b) => a.id-b.id)[0]).filter(Boolean);
-  const alreadyRunning = history.find(a => a.state === 'in_progress' && selected.some(e => e.id === exams.find(x => x.title === a.title)?.id));
+  const selected = order.map(section => exams.filter(e => e.section === section).sort((a,b) => a.id-b.id)[0]).filter((exam): exam is NonNullable<typeof exam> => Boolean(exam));
+  const alreadyRunning = history.find(a => a.state === 'in_progress' && selected.some(e => e.title === a.title && e.section === a.section));
   function start() {
     if (selected.length !== order.length) return;
     if (selected.some(e => !openAccess && !free && !e.has_access)) { router.push('/dashboard/payments'); return; }
