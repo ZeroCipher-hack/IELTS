@@ -121,11 +121,12 @@ def attempts(request):
         qs=list(exam.questions.values('position','prompt','choices','accepted_answers','evidence','explanation','skill_tag'))
         if exam.section=='Writing' and d.get('accept_pending_assessment') is not True:return error('Writing bahosi AI ulanmaguncha kutilishini tasdiqlang.',409)
         profile,_=Profile.objects.get_or_create(user=request.user)
-        if not profile.free_attempt_used:profile.free_attempt_used=True;profile.save()
-        else:
-            entitlement=Entitlement.objects.select_for_update().filter(user=request.user,exam=exam,consumed=False).first()
-            if not entitlement:return error('Bepul urinish ishlatilgan. To‘lov hali ulanmagan; administrator kirish huquqi bera oladi.',402)
-            entitlement.consumed=True;entitlement.save()
+        if not settings.EXAMS_OPEN_ACCESS:
+            if not profile.free_attempt_used:profile.free_attempt_used=True;profile.save()
+            else:
+                entitlement=Entitlement.objects.select_for_update().filter(user=request.user,exam=exam,consumed=False).first()
+                if not entitlement:return error('Bepul urinish ishlatilgan. To‘lov hali ulanmagan; administrator kirish huquqi bera oladi.',402)
+                entitlement.consumed=True;entitlement.save()
         snapshot={'title':exam.title,'section':exam.section,'version':exam.version,'passage':exam.passage,'audio_url':exam.audio_url,'questions':qs,'feedback_language':profile.language}
         a=Attempt.objects.create(user=request.user,exam=exam,snapshot=snapshot,deadline=timezone.now()+timedelta(seconds=exam.duration_seconds))
     return JsonResponse(payload(a),status=201)
