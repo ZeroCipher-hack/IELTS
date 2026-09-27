@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useProduct } from '@/components/product/product-context';
 import { api, type Attempt } from '@/components/product/api';
 import ExamRunner from '@/components/product/exam-runner';
@@ -9,6 +9,7 @@ import LoadingSkeleton from '@/components/product/loading-skeleton';
 export default function ExamPage() {
   const router = useRouter();
   const params = useParams<{ examId: string }>();
+  const searchParams = useSearchParams();
   const { t, exams, history, free, load, setError } = useProduct();
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -70,7 +71,17 @@ export default function ExamPage() {
         attempt={attempt}
         t={t}
         onClose={() => { void load().catch(() => {}); router.push('/dashboard/tests'); }}
-        onComplete={(a) => router.push(`/dashboard/results/${a.id}`)}
+        onComplete={(a) => {
+          if (searchParams.get('full') !== '1') { router.push(`/dashboard/results/${a.id}`); return; }
+          try {
+            const flow = JSON.parse(localStorage.getItem('ieltsqa-full-exam') || '{}') as { ids?: number[]; step?: number; attempts?: string[] };
+            flow.attempts = [...(flow.attempts || []), a.id];
+            flow.step = (flow.step || 0) + 1;
+            localStorage.setItem('ieltsqa-full-exam', JSON.stringify(flow));
+            if (flow.ids && flow.step < flow.ids.length) router.push(`/dashboard/tests/${flow.ids[flow.step]}?full=1`);
+            else router.push('/dashboard/speaking?full=1');
+          } catch { router.push(`/dashboard/results/${a.id}`); }
+        }}
       />
     );
   }
