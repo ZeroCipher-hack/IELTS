@@ -34,7 +34,7 @@ Buyruqdan keyin localhost’ni yangilang, Testlar sahifasiga o‘ting. Lokal ./d
 6. Testlar ro‘yxatiga qayting, qoralamani tanlang va “Tekshirish va nashr qilish” amalini bajaring. Xato xabari chiqsa tuzatib, qayta nashr qiling.
 7. Frontenddagi Testlar sahifasini yangilang.
 
-Nashr qilingan test urinishlarga snapshot хэлбэрээр nusxalanadi va admin orqali tahrirlanmaydi. Tuzatish kerak bo‘lsa, ro‘yxatdan testni tanlab “Yangi versiyaga nusxalash” qiling. Yangi qoralamani tahrirlab nashr qiling.
+Nashr qilingan test urinishlarga snapshot sifatida nusxalanadi va admin orqali tahrirlanmaydi. Tuzatish kerak bo‘lsa, ro‘yxatdan testni tanlab “Yangi versiyaga nusxalash” qiling. Yangi qoralamani tahrirlab nashr qiling.
 
 ### Bo‘lim bo‘yicha kerakli maydonlar
 
