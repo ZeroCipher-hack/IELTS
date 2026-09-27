@@ -139,3 +139,24 @@ class ProfileDetailsTests(TestCase):
             self.assertEqual(response.status_code,400)
         response=self.client.post('/api/register/',data=json.dumps({'email':'new@example.com','name':'Tolqin','password':'Strong-Test-123!'}),content_type='application/json')
         self.assertEqual(response.status_code,201)
+
+class DemoContentTests(TestCase):
+    def test_seed_demo_adds_original_practice_exams_idempotently(self):
+        from io import StringIO
+        from django.core.management import call_command
+
+        call_command('seed_demo', stdout=StringIO())
+        expected={
+            'Urban gardens — original demo': 5,
+            'City History Walk — Listening practice': 8,
+            'Community Libraries — Reading practice': 8,
+            'Public Transport — Writing practice': 1,
+        }
+        for title,count in expected.items():
+            exam=Exam.objects.get(title=title)
+            self.assertTrue(exam.published)
+            self.assertEqual(exam.questions.count(),count)
+        self.assertEqual(Exam.objects.get(title='City History Walk — Listening practice').audio_url,'browser-tts://passage')
+
+        call_command('seed_demo', stdout=StringIO())
+        self.assertEqual(Exam.objects.count(),len(expected))
