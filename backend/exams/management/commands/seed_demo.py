@@ -76,11 +76,25 @@ EXAMS = [
         ],
     },
     {
-        "title": "Public Transport — Writing practice",
+        "title": "Public Transport Trends — Writing Task 1 + Task 2 practice",
         "section": "Writing",
-        "duration_seconds": 2400,
+        "duration_seconds": 3600,
         "passage": "",
         "questions": [
+            (
+                "The table below shows the percentage of commuters in Westbridge who used three forms of transport in 2010 and 2020. "
+                "Summarise the information by selecting and reporting the main features, and make comparisons where relevant. "
+                "Write at least 150 words.\n\n"
+                "Transport mode | 2010 | 2020\n"
+                "Car | 62% | 45%\n"
+                "Bus | 24% | 32%\n"
+                "Bicycle | 14% | 23%",
+                [],
+                [],
+                "",
+                "",
+                "Writing Task 1",
+            ),
             (
                 "Some people think city governments should make public transport free to reduce traffic and pollution. "
                 "Others believe passengers should pay the full cost of their journeys. Discuss both views and give your own opinion. "
