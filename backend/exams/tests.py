@@ -12,6 +12,23 @@ class ExamFlowTests(TestCase):
         self.exam=Exam.objects.create(title='Test',section='Reading',published=True,duration_seconds=600,passage='A reading passage.')
         Question.objects.create(exam=self.exam,position=1,prompt='A statement',choices=['TRUE','FALSE'],accepted_answers=['TRUE'],evidence='Proof',explanation='Explanation')
         self.client.force_login(self.user)
+    def test_catalog_marks_invalid_listening_test_unavailable(self):
+        listening = Exam.objects.create(
+            title='Legacy listening', section='Listening', published=True,
+            duration_seconds=600, audio_url='http://localhost:8001/audio.mp3',
+            passage='Transcript for browser speech.',
+        )
+        Question.objects.create(
+            exam=listening, position=1, prompt='Where is the meeting?',
+            choices=['At the library', 'At the station'], accepted_answers=['At the library'],
+        )
+        def entry():
+            return next(exam for exam in self.client.get('/api/catalog/').json()['exams'] if exam['id'] == listening.pk)
+        self.assertFalse(entry()['ready'])
+        listening.audio_url = 'browser-tts://passage'
+        listening.save(update_fields=['audio_url'])
+        self.assertTrue(entry()['ready'])
+
     def test_catalog_access_is_personal_and_resumable(self):
         from .models import Entitlement
         Entitlement.objects.create(user=self.other,exam=self.exam,reference='other-access')
