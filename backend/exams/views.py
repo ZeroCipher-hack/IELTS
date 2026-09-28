@@ -76,7 +76,13 @@ def sign_in(request):
     login(request,user);return JsonResponse({'user':person(user)})
 @endpoint(['POST'])
 def sign_out(request):logout(request);return JsonResponse({'ok':True})
-def public_exam(exam):return {'id':exam.id,'title':exam.title,'section':exam.section,'version':exam.version,'duration_seconds':exam.duration_seconds,'question_count':exam.questions.count()}
+def public_exam(exam):
+    try:
+        validate_exam(exam)
+        ready = True
+    except ValidationError:
+        ready = False
+    return {'id':exam.id,'title':exam.title,'section':exam.section,'version':exam.version,'duration_seconds':exam.duration_seconds,'question_count':exam.questions.count(),'ready':ready}
 @endpoint(['GET'])
 def catalog(request):
     profile,_=Profile.objects.get_or_create(user=request.user)
