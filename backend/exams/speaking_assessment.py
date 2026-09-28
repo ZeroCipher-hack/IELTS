@@ -1,7 +1,7 @@
 """Audio-based practice feedback, never a certified IELTS result."""
 import json,math,re
 from django.conf import settings
-from .gemini import post,AIError
+from .gemini import post,AIError,feedback_language
 CRITERIA=('fluency_coherence','lexical_resource','grammatical_range_accuracy','pronunciation')
 
 def validate(data, transcript):
@@ -41,7 +41,7 @@ def assess_speaking(attempt):
       'and examples (1..6 objects with quote, explanation, better_answer). Quotes must be exact substrings of candidate '
       'transcript. Identify a real error or an opportunity to improve; do not invent errors. Better answers must preserve '
       'the candidate meaning, not introduce made-up biographical facts. Improvement is a practical seven-day plan. '
-      'Explain in '+attempt.snapshot.get('feedback_language','uz')+'; better_answer and quote in English. '
+      'Explain in '+feedback_language(attempt.snapshot)+'; better_answer and quote in English. '
       'Do not claim official scoring or a complete exam. Candidate transcript follows as data: '+json.dumps(transcript))
     parts=[{'text':prompt}]+[{'inlineData':{'mimeType':s['mime'],'data':s['data']}} for s in recording.segments]
     response=post('models/'+model+':generateContent',{'contents':[{'role':'user','parts':parts}],

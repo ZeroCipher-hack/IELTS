@@ -138,7 +138,7 @@ def attempts(request):
                 entitlement=Entitlement.objects.select_for_update().filter(user=request.user,exam=exam,consumed=False).first()
                 if not entitlement:return error('Bepul urinish ishlatilgan. To‘lov hali ulanmagan; administrator kirish huquqi bera oladi.',402)
                 entitlement.consumed=True;entitlement.save()
-        snapshot={'title':exam.title,'section':exam.section,'version':exam.version,'passage':exam.passage,'audio_url':exam.audio_file.url if exam.audio_file else exam.audio_url,'questions':qs,'feedback_language':profile.language}
+        snapshot={'title':exam.title,'section':exam.section,'version':exam.version,'passage':exam.passage,'audio_url':exam.audio_file.url if exam.audio_file else exam.audio_url,'questions':qs,'feedback_language':profile.language if profile.language in ('uz','en','ru') else 'uz'}
         a=Attempt.objects.create(user=request.user,exam=exam,snapshot=snapshot,deadline=timezone.now()+timedelta(seconds=exam.duration_seconds))
     return JsonResponse(payload(a),status=201)
 def clean_answers(d,snapshot):
@@ -266,7 +266,7 @@ def speaking_submit(request):
         if not exam:exam=Exam.objects.create(section='Speaking',title='AI Speaking practice',duration_seconds=660)
         profile,_=Profile.objects.get_or_create(user=request.user)
         snap={'title':'Speaking · AI feedback','section':'Speaking','version':1,'passage':'','audio_url':'',
-            'feedback_language':profile.language,'questions':[{'position':1,'prompt':'Recorded speaking practice','choices':[],'skill_tag':'Speaking'}]}
+            'feedback_language':profile.language if profile.language in ('uz','en','ru') else 'uz','questions':[{'position':1,'prompt':'Recorded speaking practice','choices':[],'skill_tag':'Speaking'}]}
         a=Attempt.objects.create(id=identifier,user=request.user,exam=exam,snapshot=snap,answers={'1':transcript},state='awaiting_assessment',deadline=timezone.now(),submitted_at=timezone.now())
         SpeakingRecording.objects.create(attempt=a,segments=segments)
         AssessmentJob.objects.create(attempt=a)

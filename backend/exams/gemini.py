@@ -8,6 +8,10 @@ class AIError(Exception):pass
 
 def configured():return bool(settings.GEMINI_API_KEY and settings.AI_ENABLED)
 
+def feedback_language(snapshot):
+    language=snapshot.get('feedback_language')
+    return language if language in ('uz','en','ru') else 'uz'
+
 def post(path,data):
     if not configured():raise AIError('AI_NOT_CONFIGURED')
     request=Request('https://generativelanguage.googleapis.com/v1beta/'+path,
@@ -59,7 +63,7 @@ def assess_writing(attempt):
      'coherence_cohesion, lexical_resource, grammar. Scores must be 0 through 9 in half steps. '
      'For each submitted task provide concise feedback, an EXACT verbatim evidence substring from the essay, and a specific improvement. '
      'For an empty essay use zero scores and empty evidence. Do not invent quotes. Do not claim official examiner status. '
-     'Explain feedback and improvement in '+attempt.snapshot.get('feedback_language','uz')+'.')
+     'Explain feedback and improvement in '+feedback_language(attempt.snapshot)+'.')
     tasks=[{'position':q['position'],'prompt':q['prompt'],'essay':attempt.answers.get(str(q['position']),'')} for q in attempt.snapshot['questions']]
     response=post('models/'+model+':generateContent',{'systemInstruction':{'parts':[{'text':instructions}]},
        'contents':[{'role':'user','parts':[{'text':json.dumps({'tasks':tasks},ensure_ascii=False)}]}],
@@ -130,7 +134,7 @@ def assess_objective(attempt):
       'Use only the supplied source and locked answer key. For every wrong question return position, why the submitted '
       'answer is wrong, and a concrete next step. Evidence must be an EXACT substring of the supplied source; leave it '
       'empty when the correct answer is NOT GIVEN or when no supporting text exists. Do not invent quotations. '
-      'Explain why and next_step in '+attempt.snapshot.get('feedback_language','uz')+'.')
+      'Explain why and next_step in '+feedback_language(attempt.snapshot)+'.')
     source=attempt.snapshot.get('passage') or ''
     if not isinstance(source,str):raise AIError('AI_INVALID_REPORT')
     items=[];last_error=None
