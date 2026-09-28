@@ -29,7 +29,7 @@ export default function FullExamPage() {
     return () => { alive = false; };
   }, [isResults, flow]);
 
-  const selected = order.map(section => exams.filter(e => e.section === section).sort((a,b) => a.id-b.id)[0]).filter((exam): exam is NonNullable<typeof exam> => Boolean(exam));
+  const selected = order.map(section => exams.filter(e => e.section === section && e.ready !== false).sort((a,b) => a.id-b.id)[0]).filter((exam): exam is NonNullable<typeof exam> => Boolean(exam));
   const alreadyRunning = history.find(a => a.state === 'in_progress' && selected.some(e => e.title === a.title && e.section === a.section));
   const totalMinutes = selected.reduce((sum, exam) => sum + Math.round(exam.duration_seconds / 60), 0);
   const hasAccess = openAccess || selected.every(e => e.has_access);
@@ -73,7 +73,7 @@ export default function FullExamPage() {
           <span><ShieldCheck size={16}/>{say('Natijalar saqlanadi','Progress is saved','Результаты сохраняются')}</span>
         </div>
         {alreadyRunning&&<div className="full-exam-resume-note"><Check size={17}/>{say('Davom etayotgan urinish topildi. Boshlashni bossangiz, oxirgi bo‘limingiz ochiladi.','An unfinished attempt was found. Starting will resume that section.','Найдена незавершённая попытка. При старте откроется текущий раздел.')}</div>}
-        {selected.length!==order.length&&<div className="product-alert">{say('Boshlash uchun Listening, Reading va Writing bo‘limlarida nashr qilingan test bo‘lishi kerak.','Published Listening, Reading and Writing tests are required to begin.','Для старта нужны опубликованные тесты Listening, Reading и Writing.')}</div>}
+        {selected.length!==order.length&&<div className="product-alert">{say('Boshlash uchun Listening, Reading va Writing bo‘limlarida tayyor test bo‘lishi kerak.','Ready Listening, Reading and Writing tests are required to begin.','Для старта нужны готовые тесты Listening, Reading и Writing.')}</div>}
         {!hasAccess&&selected.length===order.length&&<div className="full-exam-resume-note">{say('Bu imtihonga kirish huquqi kerak.','Access is required for this exam.','Для экзамена требуется доступ.')}</div>}
         <button className="primary full-exam-start" disabled={selected.length!==order.length} onClick={start}><PlayIcon/>{alreadyRunning?say('Imtihonni davom ettirish','Resume exam','Продолжить экзамен'):!hasAccess?say('Kirish huquqini olish','Get access','Получить доступ'):say('Imtihonni boshlash','Start full exam','Начать экзамен')}<ArrowRight size={18}/></button>
       </div>
