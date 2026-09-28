@@ -12,6 +12,23 @@ class ExamFlowTests(TestCase):
         self.exam=Exam.objects.create(title='Test',section='Reading',published=True,duration_seconds=600,passage='A reading passage.')
         Question.objects.create(exam=self.exam,position=1,prompt='A statement',choices=['TRUE','FALSE'],accepted_answers=['TRUE'],evidence='Proof',explanation='Explanation')
         self.client.force_login(self.user)
+    def test_uploaded_listening_audio_starts_and_is_sent_to_runner(self):
+        import tempfile
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        with tempfile.TemporaryDirectory() as root, override_settings(MEDIA_ROOT=root):
+            listening = Exam.objects.create(
+                title='Uploaded listening', section='Listening', published=True,
+                duration_seconds=600, audio_url='', passage='The speaker is at the library.',
+            )
+            listening.audio_file.save(
+                'practice.wav', SimpleUploadedFile('practice.wav', b'RIFF' + b'0' * 100, content_type='audio/wav'),
+            )
+            Question.objects.create(exam=listening, position=1, prompt='Where?', choices=['Library', 'Market'], accepted_answers=['Library'])
+            response=self.client.post('/api/attempts/', data=json.dumps({'exam_id':listening.pk}), content_type='application/json')
+            self.assertEqual(response.status_code,201)
+            self.assertTrue(response.json()['audio_url'].startswith('/media/exam_audio/practice'))
+            self.assertTrue(next(e for e in self.client.get('/api/catalog/').json()['exams'] if e['id']==listening.pk)['ready'])
+
     def test_catalog_marks_invalid_listening_test_unavailable(self):
         listening = Exam.objects.create(
             title='Legacy listening', section='Listening', published=True,
