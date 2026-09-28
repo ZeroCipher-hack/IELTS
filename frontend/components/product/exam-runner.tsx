@@ -42,14 +42,26 @@ export default function ExamRunner({attempt,t,onClose,onComplete}:{attempt:Attem
  function change(position:number,value:string){values.current={...values.current,[position]:value};setAnswers(values.current);schedule()}
  function mark(position:number){marked.current=marked.current.includes(position)?marked.current.filter(p=>p!==position):[...marked.current,position];setMarks(marked.current);schedule()}
  async function leave(){setBusy(true);try{await enqueue();onClose()}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
- const syntheticListening=attempt.section==='Listening'&&attempt.audio_url==='browser-tts://passage';
+ const syntheticListening=attempt.section==='Listening'&&(!attempt.audio_url||attempt.audio_url==='browser-tts://passage');
  function toggleSyntheticAudio(){
-  if(!('speechSynthesis' in window)){setTtsUnavailable(true);return}
-  if(window.speechSynthesis.speaking){window.speechSynthesis.cancel();setTtsPlaying(false);return}
-  const utterance=new SpeechSynthesisUtterance(attempt.passage||'');
-  utterance.lang='en-GB';utterance.rate=0.9;
-  utterance.onend=()=>setTtsPlaying(false);utterance.onerror=()=>{setTtsPlaying(false);setTtsUnavailable(true)};
-  setTtsPlaying(true);window.speechSynthesis.speak(utterance);
+  const script=attempt.passage?.trim()||'';
+  if(!('speechSynthesis' in window)||typeof SpeechSynthesisUtterance==='undefined'||!script){setTtsUnavailable(true);return}
+  const synth=window.speechSynthesis;
+  if(synth.speaking||synth.pending){synth.cancel();setTtsPlaying(false);return}
+  try{
+   synth.cancel();
+   const utterance=new SpeechSynthesisUtterance(script);
+   utterance.lang='en-GB';utterance.rate=0.88;
+   const voice=synth.getVoices().find(v=>/^en(-|_)/i.test(v.lang));
+   if(voice)utterance.voice=voice;
+   let started=false;
+   let startTimer:ReturnType<typeof setTimeout>|null=null;
+   utterance.onstart=()=>{started=true;if(startTimer)clearTimeout(startTimer);setTtsPlaying(true)};
+   utterance.onend=()=>{if(startTimer)clearTimeout(startTimer);setTtsPlaying(false)};
+   utterance.onerror=()=>{if(startTimer)clearTimeout(startTimer);setTtsPlaying(false);setTtsUnavailable(true)};
+   setTtsUnavailable(false);setTtsPlaying(true);synth.speak(utterance);
+   startTimer=setTimeout(()=>{if(!started&&!synth.speaking&&!synth.pending){setTtsPlaying(false);setTtsUnavailable(true)}},2500);
+  }catch{setTtsPlaying(false);setTtsUnavailable(true)}
  }
  useEffect(()=>()=>{if('speechSynthesis' in window)window.speechSynthesis.cancel()},[]);
  const total=attempt.questions?.length||0,answered=attempt.questions?.filter(q=>answers[q.position]?.trim()).length||0;
@@ -65,7 +77,7 @@ export default function ExamRunner({attempt,t,onClose,onComplete}:{attempt:Attem
   {seconds===0&&<p role="status" className="product-alert">{t.expired}</p>}
   <div className={`live-exam-grid ${isWriting?'writing-exam-grid':''}`}>
    <article className={`panel live-passage ${isListening?'listening-passage':isReading?'reading-passage':isWriting?'writing-overview':''}`}>
-    {isListening?<><div className="passage-heading"><span className="eyebrow">LISTENING · AUDIO</span><h2>Listen and answer</h2><p>Play the recording and complete the questions in order.</p></div>{attempt.audio_url&&(syntheticListening?<div className="audio-player-card"><div className="audio-player-icon"><Volume2 size={20}/></div><div className="audio-player-copy"><strong>{ttsUnavailable?'Sample transcript available':'Listening sample'}</strong><span>{ttsUnavailable?'Text fallback for checking this demo':'Use headphones and listen carefully'}</span></div><button type="button" className="primary" onClick={toggleSyntheticAudio}>{ttsPlaying?<Square size={17}/>:<Play size={17}/>} {ttsPlaying?'Stop sample audio':'Play sample audio'}</button></div>:<div className="audio-player-card"><div className="audio-player-icon"><Volume2 size={20}/></div><div className="audio-player-copy"><strong>Listening audio</strong><span>Use headphones for the best experience</span></div><audio controls controlsList="nodownload" src={attempt.audio_url} onError={()=>setError(t.audioError)}/></div>)}{syntheticListening&&ttsUnavailable&&<div className="product-muted listening-fallback" role="status"><p>Browser voice playback is unavailable on this device. This fallback is only for checking the demo questions; it does not test listening skill.</p><details><summary>Show sample transcript</summary><p lang="en">{attempt.passage}</p></details></div>}</>
+    {isListening?<><div className="passage-heading"><span className="eyebrow">LISTENING · AUDIO</span><h2>Listen and answer</h2><p>Play the recording and complete the questions in order.</p></div>{isListening&&(syntheticListening?<div className="audio-player-card"><div className="audio-player-icon"><Volume2 size={20}/></div><div className="audio-player-copy"><strong>{ttsUnavailable?'Transcript fallback ready':'Browser audio sample'}</strong><span>{ttsUnavailable?'This device could not play speech audio':'Play the sample, then answer the questions'}</span></div><button type="button" className="primary" onClick={toggleSyntheticAudio}>{ttsPlaying?<Square size={17}/>:<Play size={17}/>} {ttsPlaying?'Stop sample audio':'Play sample audio'}</button></div>:<div className="audio-player-card"><div className="audio-player-icon"><Volume2 size={20}/></div><div className="audio-player-copy"><strong>Listening audio</strong><span>Play the recording, then answer the questions</span></div><audio controls controlsList="nodownload" src={attempt.audio_url} onError={()=>setError(t.audioError)}/></div>)}{syntheticListening&&ttsUnavailable&&<div className="product-muted listening-fallback" role="status"><p>Browser voice playback is unavailable on this device. This fallback is only for checking the demo questions; it does not test listening skill.</p><details><summary>Show sample transcript</summary><p lang="en">{attempt.passage}</p></details></div>}</>
     :isReading?<><div className="passage-heading"><span className="eyebrow">READING · PASSAGE</span><h2>Read the passage</h2><p>Use the passage to find evidence for each answer.</p></div><div lang="en" className="passage-copy reading-copy">{attempt.passage}</div></>
     :isWriting?<><div className="passage-heading"><span className="eyebrow">WRITING STUDIO</span><h2>Your tasks</h2><p>Plan your response, then write it in the answer panels.</p></div><div className="writing-task-list">{attempt.questions?.map(q=><a className="writing-task-link" key={q.position} href={`#live-q-${q.position}`}><span>Task {q.position}</span><strong>{q.prompt.slice(0,78)}{q.prompt.length>78?'…':''}</strong><small>{words(answers[q.position]||'')} {t.words}</small></a>)}</div><div className="writing-word-summary"><strong>{writingWords}</strong><span>{t.words} total</span></div></>
     :<><span className="eyebrow">{t.passage}</span><div lang="en" className="passage-copy">{attempt.passage}</div></>}
