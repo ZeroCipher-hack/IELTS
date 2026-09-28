@@ -8,9 +8,9 @@ Loyiha papkasida quyidagilarni ishga tushiring:
     source .venv/bin/activate
     DJANGO_DEBUG=1 python manage.py seed_demo
 
-Buyruq mavjud testlarni o‘zgartirmaydi. U original sinov materiallarini qo‘shadi:
+Buyruq mavjud savollarni o‘zgartirmaydi. Eski demo Listening audio manbasi yaroqsiz bo‘lsa tuzatadi. Kompyuterda `espeak-ng` mavjud bo‘lsa, demo uchun lokal WAV ham yaratadi va davom etayotgan demo urinishlariga ulaydi. U original sinov materiallarini qo‘shadi:
 
-- Listening: City History Walk — 8 savol. Brauzer matnni inglizcha ovozda o‘qiydi. Bu haqiqiy audio emas, faqat oqimni tekshirish uchun sintetik ovoz.
+- Listening: City History Walk — 8 savol. `espeak-ng` bo‘lsa WAV fayl yaratiladi; bo‘lmasa brauzerning sintetik ovozi sinab ko‘riladi. Ikkalasi ham mashq uchun sinov ovozi.
 - Reading: Community Libraries — 8 ta True / False / Not Given savoli.
 - Writing: Public Transport Trends — Task 1 va Task 2. AI kaliti va worker ishlamasa, javoblar saqlanadi, bahosi kutilayotgan holatda qoladi.
 - Avvalgi Urban gardens Reading demosi saqlanadi.
@@ -18,6 +18,10 @@ Buyruq mavjud testlarni o‘zgartirmaydi. U original sinov materiallarini qo‘s
 Speaking alohida savol-javob testi emas: mavjud AI Speaking mashq sahifasi orqali ishlaydi. Uni sinash uchun serverda AI kaliti va kerakli Speaking sozlamalari yoqilgan bo‘lishi kerak. To‘liq imtihonda sozlanmagan bo‘lsa o‘tkazib yuborish mumkin.
 
 Buyruqdan keyin localhost’ni yangilang, Testlar sahifasiga o‘ting. Lokal ./dev.sh sinov rejimida nashr qilingan testlarni ochadi.
+
+### Brauzerda Listening ovozi eshitilmasa
+
+Kali/Linux tizimida bir marta `sudo apt install espeak-ng` bajaring. Keyin `bash dev.sh` ni qayta ishga tushiring. `Demo audio tayyor: /media/exam_audio/demo-city-history-walk.wav` yozuvi chiqishi kerak. Frontendda Listening testini qayta oching; faol urinishdagi saqlangan javoblar saqlanadi. Audio `/media/` orqali Next.js tomonidan Django’dan uzatiladi. Brauzer orqali sintetik ovoz chiqmasa ham lokal WAV ijro etiladi.
 
 ## Django admin orqali o‘zingiz test qo‘shish
 
@@ -29,7 +33,7 @@ Buyruqdan keyin localhost’ni yangilang, Testlar sahifasiga o‘ting. Lokal ./d
 
 2. Backend ishlab turganida http://127.0.0.1:8001/admin/ ga kiring.
 3. Exams → Add exam ni tanlang.
-4. Sarlavha, bo‘lim, davomiylik va bo‘limga tegishli matn yoki audio ma’lumotlarini kiriting.
+4. Sarlavha, bo‘lim, davomiylik va bo‘limga tegishli matnni kiriting. Listening uchun `Audio file` maydoniga MP3, WAV, OGG, M4A yoki WebM yozuvini yuklang (ko‘pi bilan 20 MB) yoki ishlaydigan HTTPS audio manzilini kiriting. Ikkalasi ham bo‘lsa yuklangan fayl ishlatiladi.
 5. Questions qismida har bir savol, variantlar va javob kalitini kiriting.
 6. Testlar ro‘yxatiga qayting, qoralamani tanlang va “Tekshirish va nashr qilish” amalini bajaring. Xato xabari chiqsa tuzatib, qayta nashr qiling.
 7. Frontenddagi Testlar sahifasini yangilang.
@@ -40,12 +44,12 @@ Nashr qilingan test urinishlarga snapshot sifatida nusxalanadi va admin orqali t
 
 | Bo‘lim | Kerakli ma’lumotlar |
 |---|---|
-| Listening | Ishlaydigan HTTPS audio manzili, savollar, variantlar va to‘g‘ri javoblar. Haqiqiy testda audio skriptini passage maydoniga kiritmang — foydalanuvchiga ko‘rinadi. |
+| Listening | Yuklangan audio fayl yoki ishlaydigan HTTPS audio manzili, savollar, variantlar va to‘g‘ri javoblar. Haqiqiy testda audio skriptini passage maydoniga kiritmang — foydalanuvchiga ko‘rinadi. |
 | Reading | Matn, savollar, variantlar va javob kalitlari. True / False / Not Given variantlarini aynan TRUE, FALSE, NOT GIVEN deb yozing. |
 | Writing | Prompt, bo‘sh variantlar [] va bo‘sh kalit []. Hozirgi demo Task 1 uchun raqamlarni matnli jadval ko‘rinishida beradi; rasmli diagrammani AI baholashga nashr qilmang. |
 | Speaking | Admin savollaridan foydalanmaydi. AI mashqi alohida yoqiladi; to‘liq IELTS Speaking baholashi deb ko‘rsatmang. |
 
-Listening audio faylini HTTPS havola beradigan server yoki fayl xizmatiga joylang. Havola brauzerda login talab qilmasdan ochilishi kerak. Faqat foydalanish huquqingiz bor audio qo‘shing.
+Admin panelga audio yuklasangiz, fayl `backend/media/exam_audio/` papkasida, fayl nomi esa SQLite bazasida saqlanadi. `backend/db.sqlite3` bazani zaxiralashning o‘zi yetmaydi: `backend/media/` papkasini ham saqlang. Lokal `dev.sh` media fayllarini uzatadi; production serverda `/media/` uchun doimiy storage va serving alohida sozlanadi. Tashqi HTTPS havola ishlatsangiz, brauzerda login talab qilmasdan ochilishi kerak. Faqat foydalanish huquqingiz bor audio qo‘shing.
 
 ## JSON fayl bilan Listening testi kiritish
 
@@ -86,4 +90,4 @@ example.org manzilini haqiqiy, ishlaydigan HTTPS audio URL bilan almashtiring. T
 
 ## Muhim
 
-Repo ichidagi materiallar original mashq savollari, haqiqiy IELTS imtihonidan olinmagan. Listening brauzer ovozi bilan beriladigan demo oqimni tekshiradi, lekin haqiqiy audio sifati yoki IELTS imtihon darajasini tasdiqlamaydi. Reading va Listening natijasi xom to‘g‘ri javob soni. Writing bahosi AI sozlamalari va worker ishlashiga bog‘liq. Rasmiy IELTS bandi va’da qilinmaydi.
+Repo ichidagi materiallar original mashq savollari, haqiqiy IELTS imtihonidan olinmagan. Listening sintetik ovozi bilan beriladigan demo oqimni tekshiradi, lekin haqiqiy audio sifati yoki IELTS imtihon darajasini tasdiqlamaydi. Reading va Listening natijasi xom to‘g‘ri javob soni. Writing bahosi AI sozlamalari va worker ishlashiga bog‘liq. Rasmiy IELTS bandi va’da qilinmaydi.
