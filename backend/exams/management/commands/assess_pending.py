@@ -5,7 +5,7 @@ from django.db import transaction
 from django.utils import timezone
 from exams.models import AssessmentJob,Attempt,SpeakingRecording
 from exams.speaking_assessment import assess_speaking
-from exams.gemini import configured,assess_writing,AIError
+from exams.gemini import configured,assess_writing,assess_objective,AIError
 
 def process_one():
     now=timezone.now()
@@ -16,14 +16,18 @@ def process_one():
             job.state='failed';job.error_code='AI_RETRY_EXHAUSTED';job.save();SpeakingRecording.objects.filter(attempt=job.attempt).delete();return True
         job.state='running';job.tries+=1;job.lease=uuid.uuid4();job.available_at=now+timedelta(minutes=3);job.save()
         lease=job.lease;pk=job.pk;attempt=job.attempt
-    try:report=(assess_speaking(attempt) if attempt.snapshot.get('section')=='Speaking' else assess_writing(attempt));error=None
+    section=attempt.snapshot.get('section')
+    try:
+        report=(assess_speaking(attempt) if section=='Speaking' else assess_writing(attempt) if section=='Writing' else assess_objective(attempt));error=None
     except AIError as exc:report=None;error=str(exc)
     with transaction.atomic():
         job=AssessmentJob.objects.select_for_update().get(pk=pk)
         if job.lease!=lease:return True
         a=Attempt.objects.select_for_update().get(pk=job.attempt_id)
         if report is not None:
-            if a.state=='awaiting_assessment':
+            if section in ('Reading','Listening') and a.state=='graded' and a.result is not None:
+                a.result={**a.result,'tutoring':report};a.save(update_fields=['result'])
+            elif a.state=='awaiting_assessment':
                 a.result={'correct':0,'total':0,'rows':[],'skills':{},'weekly_plan':[],'band':report['band'],'assessment':report}
                 a.state='graded';a.save(update_fields=['result','state'])
             job.state='done';job.error_code=''
