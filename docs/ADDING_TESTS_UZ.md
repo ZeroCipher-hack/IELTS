@@ -45,7 +45,7 @@ Writing va Speaking ilgari mavjud AI baholash oqimidan foydalanadi. Writing baho
 4. Sarlavha, bo‘lim, davomiylik va bo‘limga tegishli matnni kiriting. Listening uchun `Audio file` maydoniga MP3, WAV, OGG, M4A yoki WebM yozuvini yuklang (ko‘pi bilan 20 MB) yoki ishlaydigan HTTPS audio manzilini kiriting. Ikkalasi ham bo‘lsa yuklangan fayl ishlatiladi.
 5. Questions qismida har bir savol, variantlar va javob kalitini kiriting.
 6. Testlar ro‘yxatiga qayting, qoralamani tanlang va “Tekshirish va nashr qilish” amalini bajaring. Xato xabari chiqsa tuzatib, qayta nashr qiling.
-7. Frontenddagi Testlar sahifasini yangilang.
+7. Frontenddagi Testlar sahifasini yangilang. To‘liq imtihonda yangi testni ishlatish uchun `/dashboard/full-exam` sahifasidagi Listening, Reading va Writing tanlovlaridan kerakli testni belgilang.
 
 Nashr qilingan test urinishlarga snapshot sifatida nusxalanadi va admin orqali tahrirlanmaydi. Tuzatish kerak bo‘lsa, ro‘yxatdan testni tanlab “Yangi versiyaga nusxalash” qiling. Yangi qoralamani tahrirlab nashr qiling.
 
