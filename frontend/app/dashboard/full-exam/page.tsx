@@ -15,6 +15,7 @@ export default function FullExamPage() {
   const params = useSearchParams();
   const { exams, openAccess, free, history, say, t, catalogLoading } = useProduct();
   const [results, setResults] = useState<Attempt[] | null>(null);
+  const [chosen, setChosen] = useState<Record<string, number>>({});
   const [flow, setFlow] = useState<Flow | null>(null);
   const isResults = params.get('results') === '1';
   useEffect(() => {
@@ -29,7 +30,7 @@ export default function FullExamPage() {
     return () => { alive = false; };
   }, [isResults, flow]);
 
-  const selected = order.map(section => exams.filter(e => e.section === section && e.ready !== false).sort((a,b) => a.id-b.id)[0]).filter((exam): exam is NonNullable<typeof exam> => Boolean(exam));
+  const selected = order.map(section => { const options=exams.filter(e => e.section === section && e.ready !== false).sort((a,b) => a.id-b.id); return options.find(e => e.id === chosen[section]) || options[0]; }).filter((exam): exam is NonNullable<typeof exam> => Boolean(exam));
   const alreadyRunning = history.find(a => a.state === 'in_progress' && selected.some(e => e.title === a.title && e.section === a.section));
   const totalMinutes = selected.reduce((sum, exam) => sum + Math.round(exam.duration_seconds / 60), 0);
   const hasAccess = openAccess || selected.every(e => e.has_access);
@@ -90,7 +91,7 @@ export default function FullExamPage() {
       <div className="full-exam-steps-grid">
         {order.map((section,index)=>{const exam=selected.find(e=>e.section===section);const Icon=icons[section];return <article className={'full-exam-step skill-'+section.toLowerCase()} key={section}>
           <div className="full-exam-step-top"><span className="full-exam-step-number">0{index+1}</span><span className="skill-icon"><Icon size={21}/></span></div>
-          <h3>{section}</h3><p>{exam?exam.title:say('Nashr qilingan test topilmadi','No published test found','Опубликованный тест не найден')}</p>
+          <h3>{section}</h3>{exam?<label className="full-exam-test-select">{say('Testni tanlang','Choose a test','Выберите тест')}<select value={exam.id} onChange={event=>setChosen(current=>({...current,[section]:Number(event.target.value)}))}>{exams.filter(item=>item.section===section&&item.ready!==false).map(item=><option key={item.id} value={item.id}>{item.title}</option>)}</select></label>:<p>{say('Tayyor test topilmadi','No ready test found','Готовый тест не найден')}</p>}
           <div className="full-exam-step-meta">{exam?<><span>{exam.question_count} {t.questions}</span><span>{Math.round(exam.duration_seconds/60)} {t.minutes}</span></>:<span>{say('Mavjud emas','Unavailable','Недоступно')}</span>}</div>
         </article>})}
         <article className="full-exam-step skill-speaking">
