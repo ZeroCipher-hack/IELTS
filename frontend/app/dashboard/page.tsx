@@ -76,7 +76,7 @@ export default function DashboardPage() {
           return (
             <Link className={'panel skill-action skill-' + name.toLowerCase()} key={name} href={href}>
               <div className="dashboard-skill-top"><span className="skill-icon"><Icon size={23} /></span><span className="dashboard-skill-count">{sectionHistory.length ? `${sectionHistory.length} ${say('urinish', 'attempts', 'попыток')}` : say('Yangi', 'New', 'Новое')}</span></div>
-              <div className="dashboard-skill-name"><h3>{name}</h3><p>{say(...detail)}</p></div>
+              <div className="dashboard-skill-name"><h3>{name}</h3><p>{say(detail[0], detail[1], detail[2])}</p></div>
               <div className="dashboard-skill-result"><span>{result ? say('Oxirgi natija', 'Latest result', 'Последний результат') : say('Hozircha natija yo‘q', 'No result yet', 'Пока нет результата')}</span><strong>{result ? (result.result!.assessment ? `${result.result!.band} AI band` : `${result.result!.correct} / ${result.result!.total}`) : '—'}</strong></div>
               <span className="skill-cta">{t.open}<ArrowRight size={18} /></span>
             </Link>
