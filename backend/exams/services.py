@@ -56,4 +56,9 @@ def finish_attempt(a):
     if a.snapshot['section']=='Writing':
         from .models import AssessmentJob
         AssessmentJob.objects.get_or_create(attempt=a)
+    elif a.snapshot['section'] in ('Reading','Listening') and any(not row['correct'] for row in a.result['rows']):
+        from .gemini import configured
+        if configured():
+            from .models import AssessmentJob
+            AssessmentJob.objects.get_or_create(attempt=a)
     return a
