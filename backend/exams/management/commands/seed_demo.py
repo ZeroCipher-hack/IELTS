@@ -127,7 +127,7 @@ class Command(BaseCommand):
                     existing.save(update_fields=["audio_url"])
                     for attempt in Attempt.objects.filter(exam=existing, state="in_progress"):
                         snapshot = attempt.snapshot
-                        saved_audio = snapshot.get("audio_url", "")
+                        saved_audio = str(snapshot.get("audio_url") or "")
                         if not (saved_audio.startswith("https://") or saved_audio == "browser-tts://passage"):
                             snapshot["audio_url"] = audio_url
                             attempt.snapshot = snapshot
