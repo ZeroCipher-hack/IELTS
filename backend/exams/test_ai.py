@@ -229,3 +229,10 @@ class ObjectiveCoachingTests(TestCase):
         response=self.start_and_submit('2021')
         self.assertEqual(response['result']['correct'],1)
         self.assertFalse(AssessmentJob.objects.filter(attempt_id=response['id']).exists())
+    @override_settings(AI_COACHING_DAILY_LIMIT=1,EXAMS_OPEN_ACCESS=True)
+    def test_coaching_daily_limit_applies_in_open_access_mode(self):
+        first=self.start_and_submit('2022')
+        second=self.start_and_submit('2022')
+        self.assertTrue(AssessmentJob.objects.filter(attempt_id=first['id']).exists())
+        self.assertFalse(AssessmentJob.objects.filter(attempt_id=second['id']).exists())
+        self.assertEqual(second['result']['correct'],0)

@@ -1,4 +1,6 @@
 """Provider-independent exam validation, submission and evidence-based feedback."""
+from datetime import timedelta
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
@@ -60,5 +62,8 @@ def finish_attempt(a):
         from .gemini import configured
         if configured():
             from .models import AssessmentJob
-            AssessmentJob.objects.get_or_create(attempt=a)
+            since=timezone.now()-timedelta(days=1)
+            used=AssessmentJob.objects.filter(attempt__user=a.user,attempt__submitted_at__gte=since,
+                attempt__snapshot__section__in=['Reading','Listening']).count()
+            if used<max(0,settings.AI_COACHING_DAILY_LIMIT):AssessmentJob.objects.get_or_create(attempt=a)
     return a
