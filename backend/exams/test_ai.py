@@ -3,8 +3,8 @@ from unittest.mock import patch
 from django.test import TestCase,override_settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from .models import Exam,Attempt,AssessmentJob
-from .gemini import AIError,validate_report,CRITERIA,assess_writing
+from .models import Exam,Question,Attempt,AssessmentJob
+from .gemini import AIError,validate_report,validate_objective_report,CRITERIA,assess_writing
 from .management.commands.assess_pending import process_one
 
 @override_settings(AI_ENABLED=True,GEMINI_API_KEY='test-only-placeholder')
@@ -81,3 +81,45 @@ class AIIntegrationTests(TestCase):
         with patch('exams.gemini.post') as mocked:
             self.assertEqual(self.client.post('/api/voice/token/',data='{}',content_type='application/json').status_code,503)
             mocked.assert_not_called()
+
+@override_settings(AI_ENABLED=True,GEMINI_API_KEY='test-only-placeholder')
+class ObjectiveCoachingTests(TestCase):
+    def setUp(self):
+        self.user=get_user_model().objects.create_user('coaching@example.com')
+        self.client.force_login(self.user)
+        self.exam=Exam.objects.create(title='Reading coaching',section='Reading',published=True,
+            passage='The council planted native reeds in 2021.',duration_seconds=600)
+        Question.objects.create(exam=self.exam,position=1,prompt='When were reeds planted?',
+            choices=['2021','2022'],accepted_answers=['2021'],
+            evidence='The council planted native reeds in 2021.',explanation='The text says 2021.')
+    def start_and_submit(self,answer):
+        started=self.client.post('/api/attempts/',data=json.dumps({'exam_id':self.exam.pk}),content_type='application/json')
+        self.assertEqual(started.status_code,201)
+        return self.client.post('/api/attempts/'+started.json()['id']+'/submit/',
+            data=json.dumps({'answers':{'1':answer}}),content_type='application/json').json()
+    def test_ai_explains_wrong_answer_without_regrading(self):
+        response=self.start_and_submit('2022')
+        self.assertEqual(response['result']['correct'],0)
+        self.assertIsNone(response['result']['band'])
+        self.assertTrue(AssessmentJob.objects.filter(attempt_id=response['id']).exists())
+        attempt=Attempt.objects.get(pk=response['id'])
+        report=validate_objective_report({'items':[{'position':1,'evidence':'The council planted native reeds in 2021.',
+            'why':'2022 matnda yo‘q.','next_step':'Matndan sanani belgilang.'}]},attempt)
+        with patch('exams.management.commands.assess_pending.assess_objective',return_value=report):
+            self.assertTrue(process_one())
+        refreshed=self.client.get('/api/attempts/'+response['id']+'/').json()
+        self.assertEqual(refreshed['result']['correct'],0)
+        self.assertIsNone(refreshed['result']['band'])
+        self.assertEqual(refreshed['result']['tutoring']['items'][0]['next_step'],'Matndan sanani belgilang.')
+        self.assertEqual(refreshed['tutoring_status'],'done')
+    def test_rejects_invented_evidence_and_missing_position(self):
+        response=self.start_and_submit('2022')
+        attempt=Attempt.objects.get(pk=response['id'])
+        with self.assertRaises(AIError):
+            validate_objective_report({'items':[{'position':1,'evidence':'invented quotation','why':'Wrong year',
+                'next_step':'Check the date'}]},attempt)
+        with self.assertRaises(AIError):validate_objective_report({'items':[]},attempt)
+    def test_correct_answer_does_not_queue_ai(self):
+        response=self.start_and_submit('2021')
+        self.assertEqual(response['result']['correct'],1)
+        self.assertFalse(AssessmentJob.objects.filter(attempt_id=response['id']).exists())
