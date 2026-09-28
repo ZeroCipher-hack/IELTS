@@ -121,17 +121,19 @@ class Command(BaseCommand):
                 # Older local demo rows may predate the browser TTS fallback. Only
                 # fill a missing audio source; never replace a real URL or content.
                 audio_url = spec.get("audio_url", "")
-                if existing.section == "Listening" and not existing.audio_url and audio_url:
+                usable_audio = existing.audio_url.startswith("https://") or existing.audio_url == "browser-tts://passage"
+                if existing.section == "Listening" and audio_url and not usable_audio:
                     existing.audio_url = audio_url
                     existing.save(update_fields=["audio_url"])
                     for attempt in Attempt.objects.filter(exam=existing, state="in_progress"):
                         snapshot = attempt.snapshot
-                        if not snapshot.get("audio_url"):
+                        saved_audio = snapshot.get("audio_url", "")
+                        if not (saved_audio.startswith("https://") or saved_audio == "browser-tts://passage"):
                             snapshot["audio_url"] = audio_url
                             attempt.snapshot = snapshot
                             attempt.save(update_fields=["snapshot"])
                     backfilled_audio += 1
-                    self.stdout.write(self.style.SUCCESS(f"Added missing Listening playback source: {spec['title']}"))
+                    self.stdout.write(self.style.SUCCESS(f"Repaired Listening demo playback source: {spec['title']}"))
                 else:
                     self.stdout.write(f"Already exists, kept unchanged: {spec['title']}")
                 continue
@@ -158,4 +160,4 @@ class Command(BaseCommand):
             exam.save(update_fields=["published"])
             created += 1
             self.stdout.write(self.style.SUCCESS(f"Created and published: {exam.title}"))
-        self.stdout.write(self.style.SUCCESS(f"Seed complete. New exams: {created}; Listening sources added: {backfilled_audio}."))
+        self.stdout.write(self.style.SUCCESS(f"Seed complete. New exams: {created}; Listening sources repaired: {backfilled_audio}."))
