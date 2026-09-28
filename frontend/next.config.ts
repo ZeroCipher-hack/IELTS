@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   allowedDevOrigins: ['192.168.154.151'],
   async rewrites() {
-    return backend ? [{source:"/api/:path*",destination:`${backend}/api/:path*/`},{source:"/admin/:path*",destination:`${backend}/admin/:path*/`},{source:"/static/:path*",destination:`${backend}/static/:path*`},{source:"/media/:path*",destination:`${backend}/media/:path*`}] : [];
+    return backend ? [{source:"/api/:path*",destination:`${backend}/api/:path*/`},{source:"/admin/:path*",destination:`${backend}/admin/:path*/`},{source:"/static/:path*",destination:`${backend}/static/:path*`}] : [];
   },
 };
 export default nextConfig;
