@@ -591,3 +591,87 @@ html[data-theme="dark"] .examiner-character { background:radial-gradient(ellipse
  .dashboard-plan-card>.secondary { margin-left:58px; }
 }
 @media(prefers-reduced-motion:reduce) { .dashboard-full-exam-card { transition:none; } .dashboard-full-exam-card:hover { transform:none; } }
+
+
+/* Skill landing spaces: each section gets its own prominent header and practice layout. */
+.tests-workspace { display:flex; flex-direction:column; gap:26px; }
+.is-skill-view { --skill-color:var(--primary); }
+.is-skill-view.skill-listening { --skill-color:var(--skill-listening); }
+.is-skill-view.skill-reading { --skill-color:var(--skill-reading); }
+.is-skill-view.skill-writing { --skill-color:var(--skill-writing); }
+.is-skill-view.skill-speaking { --skill-color:var(--skill-speaking); }
+.section-studio-hero { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(275px,.8fr); gap:0; overflow:hidden; min-height:330px; border:1px solid color-mix(in srgb,var(--skill-color) 22%,var(--border)); border-radius:28px; background:linear-gradient(115deg,color-mix(in srgb,var(--skill-color) 7%,var(--card)),var(--card) 67%); }
+.section-studio-main { display:flex; flex-direction:column; align-items:flex-start; justify-content:center; padding:clamp(24px,4vw,46px); }
+.section-studio-heading { display:flex; align-items:center; gap:14px; }
+.section-studio-icon { display:grid; place-items:center; width:58px; height:58px; border-radius:18px; background:color-mix(in srgb,var(--skill-color) 14%,var(--card)); color:var(--skill-color); }
+.section-studio-kicker { color:var(--skill-color); font-size:11px; font-weight:800; letter-spacing:1px; }
+.section-studio-main h1 { max-width:650px; margin-top:22px; font-size:clamp(32px,4vw,46px); line-height:1.13; letter-spacing:-1px; }
+.section-studio-main>p { max-width:610px; margin-top:12px; font-size:15px; line-height:1.7; }
+.section-studio-facts { display:flex; flex-wrap:wrap; gap:9px; margin-top:21px; }
+.section-studio-facts span { display:inline-flex; align-items:center; gap:7px; min-height:34px; padding:7px 10px; border:1px solid color-mix(in srgb,var(--skill-color) 17%,var(--border)); border-radius:999px; background:var(--card); color:var(--muted-foreground); font-size:11px; }
+.section-studio-facts span svg { color:var(--skill-color); }
+.section-studio-actions { display:flex; flex-wrap:wrap; align-items:center; gap:15px; margin-top:23px; }
+.section-studio-actions .primary { background:var(--skill-color); border-color:var(--skill-color); }
+.section-studio-actions .text-button { color:var(--skill-color); }
+.section-studio-side { display:flex; flex-direction:column; align-items:flex-start; justify-content:center; padding:32px; border-left:1px solid color-mix(in srgb,var(--skill-color) 18%,var(--border)); background:color-mix(in srgb,var(--skill-color) 7%,var(--card)); }
+.section-studio-side-label { color:var(--skill-color); font-size:10px; font-weight:800; letter-spacing:1px; }
+.section-studio-side>strong { margin-top:11px; color:var(--skill-color); font-size:48px; line-height:1; font-variant-numeric:tabular-nums; }
+.section-studio-side>span:not(.section-studio-side-label) { margin-top:6px; color:var(--muted-foreground); font-size:13px; }
+.section-studio-side>p { margin-top:18px; font-size:13px; line-height:1.65; }
+.section-studio-track { display:flex; gap:6px; width:100%; margin-top:18px; }
+.section-studio-track i { flex:1; height:5px; border-radius:99px; background:color-mix(in srgb,var(--skill-color) 18%,var(--card)); }
+.section-studio-track i:first-child { background:var(--skill-color); }
+.skill-switcher { display:flex; gap:7px; overflow-x:auto; padding:4px 0; scrollbar-width:thin; }
+.skill-switcher button { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:43px; padding:9px 14px; border:1px solid var(--border); border-radius:999px; background:var(--card); color:var(--muted-foreground); font-size:13px; font-weight:650; white-space:nowrap; }
+.skill-switcher button:hover { border-color:var(--skill-color,var(--primary)); color:var(--skill-color,var(--primary)); }
+.skill-switcher button.active { border-color:var(--skill-color,var(--primary)); background:var(--skill-color,var(--primary)); color:white; }
+.tests-heading { margin:0; }
+.dashboard-full-test-banner { border-radius:20px; }
+.test-catalog-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; scroll-margin-top:24px; }
+.test-catalog-heading h2 { margin-top:5px; font-size:25px; }
+.test-count-pill { padding:7px 11px; border-radius:999px; background:var(--muted); color:var(--muted-foreground); font-size:12px; font-weight:700; white-space:nowrap; }
+.section-test-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.section-test-grid .exam-card { position:relative; min-height:250px; padding:22px; border-radius:20px; }
+.section-test-grid .exam-card .skill-icon { width:50px; height:50px; border-radius:15px; }
+.section-test-grid .exam-card .access-badge { border-radius:999px; }
+.test-card-title h3 { margin-top:5px; font-size:21px; line-height:1.35; font-weight:700; }
+.test-card-stats { display:flex; flex-wrap:wrap; gap:8px; }
+.test-card-stats span { display:inline-flex; align-items:center; gap:6px; padding:6px 9px; border-radius:9px; background:color-mix(in srgb,var(--skill-color,var(--primary)) 8%,var(--card)); color:var(--skill-color,var(--primary)); font-size:12px; }
+.test-card-description { font-size:13px; line-height:1.6; }
+.section-test-grid .exam-card>button,.section-test-grid .exam-card>a { width:100%; margin-top:auto; }
+.is-skill-view .section-test-grid .exam-card { border-top-width:4px; }
+.speaking-parts-overview { margin:16px 0 4px; padding:22px; border:1px solid color-mix(in srgb,var(--skill-speaking) 24%,var(--border)); border-radius:20px; background:linear-gradient(120deg,color-mix(in srgb,var(--skill-speaking) 8%,var(--card)),var(--card)); }
+.speaking-parts-heading { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:16px; }
+.speaking-parts-heading h2 { margin-top:4px; font-size:21px; }
+.speaking-parts-count { padding:7px 11px; border-radius:999px; background:color-mix(in srgb,var(--skill-speaking) 13%,var(--card)); color:var(--skill-speaking); font-size:12px; font-weight:800; }
+.speaking-parts-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:11px; }
+.speaking-part-card { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:start; gap:10px; min-height:86px; padding:13px; border:1px solid var(--border); border-radius:14px; background:var(--card); }
+.speaking-part-card[aria-current=step] { border-color:var(--skill-speaking); box-shadow:0 0 0 2px color-mix(in srgb,var(--skill-speaking) 16%,transparent); }
+.speaking-part-index { color:var(--skill-speaking); font-size:11px; font-weight:850; }
+.speaking-part-card strong { font-size:13px; }
+.speaking-part-card p { margin-top:3px; font-size:11px; line-height:1.4; }
+.speaking-part-time { color:var(--skill-speaking); font-size:11px; font-weight:750; white-space:nowrap; }
+@media(max-width:850px) {
+ .section-studio-hero { grid-template-columns:1fr; }
+ .section-studio-side { border-left:0; border-top:1px solid color-mix(in srgb,var(--skill-color) 18%,var(--border)); }
+ .section-studio-side>strong { font-size:40px; }
+ .section-test-grid { grid-template-columns:1fr; }
+}
+@media(max-width:767px) {
+ .tests-workspace { gap:19px; }
+ .section-studio-hero { border-radius:21px; }
+ .section-studio-main { padding:22px 18px; }
+ .section-studio-icon { width:48px; height:48px; border-radius:15px; }
+ .section-studio-main h1 { margin-top:17px; font-size:34px; }
+ .section-studio-side { padding:22px 18px; }
+ .section-studio-facts { gap:6px; }
+ .section-studio-facts span { font-size:10px; }
+ .skill-switcher { margin:0 -4px; }
+ .skill-switcher button { min-height:40px; padding:8px 12px; }
+ .test-catalog-heading { align-items:flex-start; }
+ .test-catalog-heading h2 { font-size:21px; }
+ .section-test-grid .exam-card { min-height:230px; padding:18px; }
+ .speaking-parts-overview { padding:16px; border-radius:16px; }
+ .speaking-parts-grid { grid-template-columns:1fr; }
+ .speaking-part-card { min-height:72px; }
+}
