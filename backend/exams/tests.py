@@ -205,8 +205,8 @@ class DemoContentTests(TestCase):
             self.assertEqual(attempt.answers, {'1':'East entrance'})
             self.assertTrue(Path(exam.audio_file.path).is_file())
 
-    @patch('exams.management.commands.seed_demo.shutil.which', return_value=None)
-    def test_seed_demo_adds_original_practice_exams_idempotently(self, _mock_which):
+    @patch('exams.management.commands.seed_demo.attach_demo_audio', return_value=False)
+    def test_seed_demo_adds_original_practice_exams_idempotently(self, _mock_audio):
         from io import StringIO
         from django.core.management import call_command
 
