@@ -66,7 +66,7 @@ export default function ExamRunner({attempt,t,onClose,onComplete}:{attempt:Attem
  useEffect(()=>()=>{if('speechSynthesis' in window)window.speechSynthesis.cancel()},[]);
  const total=attempt.questions?.length||0,answered=attempt.questions?.filter(q=>answers[q.position]?.trim()).length||0;
 
- const words=(value:string)=>(value||'').trim().split(/\\s+/).filter(Boolean).length;
+ const words=(value:string)=>(value||'').trim().split(/\s+/).filter(Boolean).length;
  const writingWords=attempt.questions?.reduce((sum,q)=>sum+words(answers[q.position]||''),0)||0;
  const isListening=attempt.section==='Listening',isReading=attempt.section==='Reading',isWriting=attempt.section==='Writing';
  return <div className={'live-exam section-'+attempt.section.toLowerCase()}>
