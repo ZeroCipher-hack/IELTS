@@ -119,6 +119,14 @@ class ObjectiveCoachingTests(TestCase):
             validate_objective_report({'items':[{'position':1,'evidence':'invented quotation','why':'Wrong year',
                 'next_step':'Check the date'}]},attempt)
         with self.assertRaises(AIError):validate_objective_report({'items':[]},attempt)
+    def test_not_given_feedback_cannot_claim_a_supporting_quote(self):
+        response=self.start_and_submit('2022')
+        attempt=Attempt.objects.get(pk=response['id'])
+        attempt.result['rows'][0]['accepted_answers']=['NOT GIVEN']
+        with self.assertRaises(AIError):
+            validate_objective_report({'items':[{'position':1,'evidence':'The council planted native reeds in 2021.',
+                'why':'No evidence for the claim.','next_step':'Compare the exact statement.'}]},attempt)
+
     def test_provider_returns_validated_explanation(self):
         response=self.start_and_submit('2022')
         attempt=Attempt.objects.get(pk=response['id'])
