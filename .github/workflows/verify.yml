@@ -1,8 +1,6 @@
 name: Verify IELTSQA
 
 on:
-  push:
-    branches: [feat/full-exam-test-flow]
   pull_request:
 
 jobs:
