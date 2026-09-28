@@ -4,7 +4,7 @@ from django.test import TestCase,override_settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .models import Exam,Question,Attempt,AssessmentJob
-from .gemini import AIError,validate_report,validate_objective_report,CRITERIA,assess_writing
+from .gemini import AIError,validate_report,validate_objective_report,assess_objective,CRITERIA,assess_writing
 from .management.commands.assess_pending import process_one
 
 @override_settings(AI_ENABLED=True,GEMINI_API_KEY='test-only-placeholder')
@@ -119,6 +119,24 @@ class ObjectiveCoachingTests(TestCase):
             validate_objective_report({'items':[{'position':1,'evidence':'invented quotation','why':'Wrong year',
                 'next_step':'Check the date'}]},attempt)
         with self.assertRaises(AIError):validate_objective_report({'items':[]},attempt)
+    def test_provider_returns_validated_explanation(self):
+        response=self.start_and_submit('2022')
+        attempt=Attempt.objects.get(pk=response['id'])
+        raw={'items':[{'position':1,'evidence':'The council planted native reeds in 2021.',
+                       'why':'2022 is absent.','next_step':'Check the year in the passage.'}]}
+        provider={'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':json.dumps(raw)}]}}]}
+        with patch('exams.gemini.post',return_value=provider) as mocked:
+            report=assess_objective(attempt)
+        self.assertEqual(report['items'][0]['position'],1)
+        self.assertEqual(report['kind'],'ai_explanation')
+        self.assertNotIn('audio_url',mocked.call_args.args[1]['contents'][0]['parts'][0]['text'])
+    @override_settings(AI_ENABLED=False)
+    def test_ai_disabled_keeps_answer_key_and_editor_feedback(self):
+        response=self.start_and_submit('2022')
+        self.assertEqual(response['result']['correct'],0)
+        self.assertEqual(response['result']['rows'][0]['explanation'],'The text says 2021.')
+        self.assertFalse(AssessmentJob.objects.filter(attempt_id=response['id']).exists())
+
     def test_correct_answer_does_not_queue_ai(self):
         response=self.start_and_submit('2021')
         self.assertEqual(response['result']['correct'],1)
