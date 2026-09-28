@@ -158,5 +158,23 @@ class DemoContentTests(TestCase):
             self.assertEqual(exam.questions.count(),count)
         self.assertEqual(Exam.objects.get(title='City History Walk — Listening practice').audio_url,'browser-tts://passage')
 
+        listening = Exam.objects.get(title='City History Walk — Listening practice')
+        listening.audio_url = ''
+        listening.save(update_fields=['audio_url'])
+        learner = get_user_model().objects.create_user('seed-listening@example.com', password='Strong-Test-123!')
+        attempt = Attempt.objects.create(
+            user=learner,
+            exam=listening,
+            snapshot={'title': listening.title, 'section': 'Listening', 'passage': listening.passage, 'audio_url': ''},
+            answers={'1': 'East entrance'},
+            deadline=timezone.now() + timedelta(minutes=5),
+        )
+
         call_command('seed_demo', stdout=StringIO())
         self.assertEqual(Exam.objects.count(),len(expected))
+        listening.refresh_from_db()
+        attempt.refresh_from_db()
+        self.assertEqual(listening.audio_url, 'browser-tts://passage')
+        self.assertEqual(attempt.snapshot['audio_url'], 'browser-tts://passage')
+        self.assertEqual(attempt.answers, {'1': 'East entrance'})
+        self.assertEqual(listening.questions.count(), 8)
