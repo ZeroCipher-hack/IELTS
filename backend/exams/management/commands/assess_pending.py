@@ -13,7 +13,9 @@ def process_one():
         job=AssessmentJob.objects.select_for_update().filter(state__in=['pending','running'],available_at__lte=now).order_by('available_at').first()
         if not job:return False
         if job.tries>=3:
-            job.state='failed';job.error_code='AI_RETRY_EXHAUSTED';job.save();SpeakingRecording.objects.filter(attempt=job.attempt).delete();return True
+            job.state='failed';job.error_code='AI_RETRY_EXHAUSTED';job.save()
+            if job.attempt.snapshot.get('section')=='Speaking':SpeakingRecording.objects.filter(attempt=job.attempt).delete()
+            return True
         job.state='running';job.tries+=1;job.lease=uuid.uuid4();job.available_at=now+timedelta(minutes=3);job.save()
         lease=job.lease;pk=job.pk;attempt=job.attempt
     section=attempt.snapshot.get('section')
@@ -35,7 +37,7 @@ def process_one():
         else:
             job.state='failed' if job.tries>=3 or error=='AI_INSUFFICIENT_AUDIO' else 'pending';job.error_code=error
             job.available_at=timezone.now()+timedelta(seconds=60*job.tries)
-            if job.state=='failed':SpeakingRecording.objects.filter(attempt=a).delete()
+            if job.state=='failed' and section=='Speaking':SpeakingRecording.objects.filter(attempt=a).delete()
         job.save()
     return True
 

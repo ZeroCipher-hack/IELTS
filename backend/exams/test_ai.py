@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 from unittest.mock import patch
 from django.test import TestCase,override_settings
 from django.contrib.auth import get_user_model
@@ -136,6 +137,24 @@ class ObjectiveCoachingTests(TestCase):
         job=AssessmentJob.objects.get(attempt=attempt)
         self.assertEqual(job.state,'pending')
         self.assertEqual(job.error_code,'AI_INVALID_REPORT')
+    def test_failed_coaching_preserves_graded_score_and_rows(self):
+        response=self.start_and_submit('2022')
+        attempt=Attempt.objects.get(pk=response['id'])
+        original=deepcopy(attempt.result)
+        with patch('exams.management.commands.assess_pending.assess_objective',side_effect=AIError('AI_RATE_LIMIT')):
+            self.assertTrue(process_one())
+        attempt.refresh_from_db()
+        job=AssessmentJob.objects.get(attempt=attempt)
+        self.assertEqual(job.state,'pending')
+        self.assertEqual(attempt.state,'graded')
+        self.assertEqual(attempt.result,original)
+        job.tries=2;job.available_at=timezone.now();job.save(update_fields=['tries','available_at'])
+        with patch('exams.management.commands.assess_pending.assess_objective',side_effect=AIError('AI_RATE_LIMIT')):
+            self.assertTrue(process_one())
+        attempt.refresh_from_db();job.refresh_from_db()
+        self.assertEqual(job.state,'failed')
+        self.assertEqual(attempt.state,'graded')
+        self.assertEqual(attempt.result,original)
     def test_rejects_invented_evidence_and_missing_position(self):
         response=self.start_and_submit('2022')
         attempt=Attempt.objects.get(pk=response['id'])
