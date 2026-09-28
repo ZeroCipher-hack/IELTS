@@ -2,6 +2,15 @@ name: Verify IELTSQA
 
 on:
   pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend:
@@ -16,6 +25,19 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.txt
       - run: pip install -r backend/requirements.txt
+      - run: pip install ruff==0.14.10
+      - run: ruff check backend --select E9,F63,F7,F82
+      # Legacy backend modules predate Ruff formatting; check new modules without changing unrelated code.
+      - run: ruff format --check backend/exams/media.py backend/exams/validators.py backend/exams/test_uploads.py
+      - run: python manage.py makemigrations --check --dry-run
+        working-directory: backend
+      - run: python manage.py check --deploy
+        working-directory: backend
+        env:
+          DJANGO_DEBUG: "0"
+          DJANGO_SECRET_KEY: "ci-only-dummy-secret-change-before-deployment-1234567890"
+          DJANGO_ALLOWED_HOSTS: "example.test"
+          CSRF_TRUSTED_ORIGINS: "https://example.test"
       - run: python manage.py test exams
         working-directory: backend
   frontend:
@@ -31,6 +53,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
         working-directory: frontend
       - run: pnpm typecheck
+        working-directory: frontend
+      - run: node --experimental-strip-types --test components/product/listening-audio.test.ts
         working-directory: frontend
       - run: pnpm build
         working-directory: frontend
