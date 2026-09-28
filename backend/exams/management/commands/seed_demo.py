@@ -132,6 +132,10 @@ def attach_demo_audio(exam, stdout):
             target.unlink(missing_ok=True)
             stdout.write('Demo audio yaratilmadi; espeak-ng ni tekshiring.')
             return False
+    if not target.is_file() or target.stat().st_size <= 44:
+        target.unlink(missing_ok=True)
+        stdout.write('Demo audio fayli bo‘sh; espeak-ng ni tekshiring.')
+        return False
     exam.audio_file.name = name
     exam.audio_url = ''
     exam.save(update_fields=['audio_file', 'audio_url'])
