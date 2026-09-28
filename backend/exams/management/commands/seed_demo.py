@@ -117,14 +117,14 @@ def attach_demo_audio(exam, stdout):
     """Prefer a real local WAV for the unmodified Listening demo."""
     if exam.audio_file or exam.audio_url not in ('', 'browser-tts://passage') or exam.passage != LISTENING_SCRIPT:
         return False
-    engine = shutil.which('espeak-ng')
-    if not engine:
-        stdout.write('Demo audio: espeak-ng topilmadi. sudo apt install espeak-ng')
-        return False
     name = 'exam_audio/demo-city-history-walk.wav'
     target = Path(settings.MEDIA_ROOT) / name
-    target.parent.mkdir(parents=True, exist_ok=True)
-    if not target.exists():
+    if not target.is_file():
+        engine = shutil.which('espeak-ng')
+        if not engine:
+            stdout.write('Demo audio: espeak-ng topilmadi. sudo apt install espeak-ng')
+            return False
+        target.parent.mkdir(parents=True, exist_ok=True)
         try:
             subprocess.run([engine, '-v', 'en-gb', '-s', '135', '-w', str(target), LISTENING_SCRIPT],
                            check=True, capture_output=True, timeout=30)
