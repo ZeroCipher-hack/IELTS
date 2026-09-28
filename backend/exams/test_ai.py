@@ -155,6 +155,15 @@ class ObjectiveCoachingTests(TestCase):
         self.assertEqual(job.state,'failed')
         self.assertEqual(attempt.state,'graded')
         self.assertEqual(attempt.result,original)
+    def test_running_lease_cannot_be_claimed_twice(self):
+        self.start_and_submit('2022')
+        def while_running(attempt):
+            self.assertFalse(process_one())
+            return validate_objective_report({'items':[{'position':1,'evidence':'',
+                'why':'Check the year.','next_step':'Read the source.'}]},attempt)
+        with patch('exams.management.commands.assess_pending.assess_objective',side_effect=while_running) as mocked:
+            self.assertTrue(process_one())
+        self.assertEqual(mocked.call_count,1)
     def test_rejects_invented_evidence_and_missing_position(self):
         response=self.start_and_submit('2022')
         attempt=Attempt.objects.get(pk=response['id'])
