@@ -175,7 +175,8 @@ class ProfileDetailsTests(TestCase):
         self.assertEqual(response.status_code,201)
 
 class DemoContentTests(TestCase):
-    def test_seed_demo_adds_original_practice_exams_idempotently(self):
+    @__import__('unittest.mock', fromlist=['patch']).patch('exams.management.commands.seed_demo.shutil.which', return_value=None)
+    def test_seed_demo_adds_original_practice_exams_idempotently(self, _mock_which):
         from io import StringIO
         from django.core.management import call_command
 
