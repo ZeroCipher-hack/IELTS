@@ -13,7 +13,7 @@ type Flow = { ids: number[]; step: number; attempts: string[]; startedAt: string
 export default function FullExamPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const { exams, openAccess, free, history, say, t } = useProduct();
+  const { exams, openAccess, free, history, say, t, catalogLoading } = useProduct();
   const [results, setResults] = useState<Attempt[] | null>(null);
   const [flow, setFlow] = useState<Flow | null>(null);
   const isResults = params.get('results') === '1';
@@ -32,7 +32,7 @@ export default function FullExamPage() {
   const selected = order.map(section => exams.filter(e => e.section === section).sort((a,b) => a.id-b.id)[0]).filter((exam): exam is NonNullable<typeof exam> => Boolean(exam));
   const alreadyRunning = history.find(a => a.state === 'in_progress' && selected.some(e => e.title === a.title && e.section === a.section));
   const totalMinutes = selected.reduce((sum, exam) => sum + Math.round(exam.duration_seconds / 60), 0);
-  const hasAccess = openAccess || free || selected.every(e => e.has_access);
+  const hasAccess = openAccess || selected.every(e => e.has_access);
   function start() {
     if (selected.length !== order.length) return;
     if (!hasAccess) { router.push('/dashboard/payments'); return; }
@@ -42,7 +42,7 @@ export default function FullExamPage() {
     router.push(`/dashboard/tests/${value.ids[0]}?full=1`);
   }
 
-  if (isResults) {
+  if (catalogLoading && !isResults) return <LoadingSkeleton label={t.loading} />;\n\n  if (isResults) {
     if (!flow || !results) return <LoadingSkeleton label={t.loading} />;
     const graded = results.filter(a => a.result?.band != null);
     const avg = graded.length ? (graded.reduce((sum, a) => sum + Number(a.result?.band), 0) / graded.length).toFixed(1) : null;
@@ -73,7 +73,7 @@ export default function FullExamPage() {
         {alreadyRunning&&<div className="full-exam-resume-note"><Check size={17}/>{say('Davom etayotgan urinish topildi. Boshlashni bossangiz, oxirgi bo‘limingiz ochiladi.','An unfinished attempt was found. Starting will resume that section.','Найдена незавершённая попытка. При старте откроется текущий раздел.')}</div>}
         {selected.length!==order.length&&<div className="product-alert">{say('Boshlash uchun Listening, Reading va Writing bo‘limlarida nashr qilingan test bo‘lishi kerak.','Published Listening, Reading and Writing tests are required to begin.','Для старта нужны опубликованные тесты Listening, Reading и Writing.')}</div>}
         {!hasAccess&&selected.length===order.length&&<div className="full-exam-resume-note">{say('Bu imtihonga kirish huquqi kerak.','Access is required for this exam.','Для экзамена требуется доступ.')}</div>}
-        <button className="primary full-exam-start" disabled={selected.length!==order.length} onClick={start}><PlayIcon/>{alreadyRunning?say('Imtihonni davom ettirish','Resume exam','Продолжить экзамен'):say('Imtihonni boshlash','Start full exam','Начать экзамен')}<ArrowRight size={18}/></button>
+        <button className="primary full-exam-start" disabled={selected.length!==order.length} onClick={start}><PlayIcon/>{alreadyRunning?say('Imtihonni davom ettirish','Resume exam','Продолжить экзамен'):!hasAccess?say('Kirish huquqini olish','Get access','Получить доступ'):say('Imtihonni boshlash','Start full exam','Начать экзамен')}<ArrowRight size={18}/></button>
       </div>
       <aside className="full-exam-hero-aside">
         <span className="full-exam-aside-label">{say('IMTIHON OQIMI','EXAM FLOW','ПОРЯДОК ЭКЗАМЕНА')}</span>
@@ -84,7 +84,7 @@ export default function FullExamPage() {
     </section>
 
     <section className="full-exam-steps-section">
-      <div className="full-exam-section-heading"><div><span className="eyebrow">{say('TO‘RT KO‘NIKMA','FOUR SKILLS','ЧЕТЫРЕ НАВЫКА')}</span><h2>{say('Imtihon qanday o‘tadi','How the exam works','Как проходит экзамен')}</h2></div><span className="full-exam-access-badge">{openAccess? say('Sinov uchun ochiq','Open for testing','Открыто для тестирования'):free?t.free:say('Kirish nazorati mavjud','Access required','Требуется доступ')}</span></div>
+      <div className="full-exam-section-heading"><div><span className="eyebrow">{say('TO‘RT KO‘NIKMA','FOUR SKILLS','ЧЕТЫРЕ НАВЫКА')}</span><h2>{say('Imtihon qanday o‘tadi','How the exam works','Как проходит экзамен')}</h2></div><span className="full-exam-access-badge">{openAccess? say('Sinov uchun ochiq','Open for testing','Открыто для тестирования'):hasAccess?say('Kirish mavjud','Access granted','Доступ открыт'):say('To‘liq imtihon pullik','Full exam requires access','Полный экзамен платный')}</span></div>
       <div className="full-exam-steps-grid">
         {order.map((section,index)=>{const exam=selected.find(e=>e.section===section);const Icon=icons[section];return <article className={'full-exam-step skill-'+section.toLowerCase()} key={section}>
           <div className="full-exam-step-top"><span className="full-exam-step-number">0{index+1}</span><span className="skill-icon"><Icon size={21}/></span></div>
