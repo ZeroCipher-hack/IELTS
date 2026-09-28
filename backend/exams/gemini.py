@@ -92,6 +92,7 @@ def validate_objective_report(data,attempt):
         for key in ('evidence','why','next_step'):
             if not isinstance(item.get(key),str) or len(item[key])>1200:raise AIError('AI_INVALID_REPORT')
         if item['evidence'] and item['evidence'] not in source:raise AIError('AI_UNSUPPORTED_EVIDENCE')
+        if 'NOT GIVEN' in wrong[position]['accepted_answers'] and item['evidence']:raise AIError('AI_UNSUPPORTED_EVIDENCE')
         if not item['why'].strip() or not item['next_step'].strip():raise AIError('AI_INVALID_REPORT')
     return {'kind':'ai_explanation','items':items,'model':settings.GEMINI_WRITING_MODEL,
             'note':'AI practice explanation. The answer-key score stays unchanged.'}
