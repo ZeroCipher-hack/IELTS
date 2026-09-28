@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.core.exceptions import ValidationError
-from exams.models import Exam, Question
+from exams.models import Attempt, Exam, Question
 from exams.services import validate_exam
 
 LISTENING_SCRIPT = (
@@ -114,9 +114,26 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         created = 0
+        backfilled_audio = 0
         for spec in EXAMS:
-            if Exam.objects.filter(title=spec["title"]).exists():
-                self.stdout.write(f"Already exists, kept unchanged: {spec['title']}")
+            existing = Exam.objects.filter(title=spec["title"]).first()
+            if existing:
+                # Older local demo rows may predate the browser TTS fallback. Only
+                # fill a missing audio source; never replace a real URL or content.
+                audio_url = spec.get("audio_url", "")
+                if existing.section == "Listening" and not existing.audio_url and audio_url:
+                    existing.audio_url = audio_url
+                    existing.save(update_fields=["audio_url"])
+                    for attempt in Attempt.objects.filter(exam=existing, state="in_progress"):
+                        snapshot = attempt.snapshot
+                        if not snapshot.get("audio_url"):
+                            snapshot["audio_url"] = audio_url
+                            attempt.snapshot = snapshot
+                            attempt.save(update_fields=["snapshot"])
+                    backfilled_audio += 1
+                    self.stdout.write(self.style.SUCCESS(f"Added missing Listening playback source: {spec['title']}"))
+                else:
+                    self.stdout.write(f"Already exists, kept unchanged: {spec['title']}")
                 continue
             questions = spec["questions"]
             exam_data = {key: value for key, value in spec.items() if key != "questions"}
@@ -141,4 +158,4 @@ class Command(BaseCommand):
             exam.save(update_fields=["published"])
             created += 1
             self.stdout.write(self.style.SUCCESS(f"Created and published: {exam.title}"))
-        self.stdout.write(self.style.SUCCESS(f"Seed complete. New exams: {created}."))
+        self.stdout.write(self.style.SUCCESS(f"Seed complete. New exams: {created}; Listening sources added: {backfilled_audio}."))
