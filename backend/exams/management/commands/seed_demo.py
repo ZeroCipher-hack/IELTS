@@ -157,7 +157,7 @@ class Command(BaseCommand):
                 # Older local demo rows may predate the browser TTS fallback. Only
                 # fill a missing audio source; never replace a real URL or content.
                 audio_url = spec.get("audio_url", "")
-                usable_audio = existing.audio_url.startswith("https://") or existing.audio_url == "browser-tts://passage"
+                usable_audio = bool(existing.audio_file) or existing.audio_url.startswith("https://") or existing.audio_url == "browser-tts://passage"
                 if existing.section == "Listening" and audio_url and not usable_audio:
                     existing.audio_url = audio_url
                     existing.save(update_fields=["audio_url"])
