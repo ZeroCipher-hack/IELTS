@@ -43,7 +43,7 @@ export default function TestsPage() {
               <span className="section-studio-kicker">{say('IELTS KO‘NIKMASI', 'IELTS SKILL', 'НАВЫК IELTS')} · {selected.name.toUpperCase()}</span>
             </div>
             <h1>{selected.name === 'Speaking' ? say('Gapirishni mashq qiling', 'Build speaking confidence', 'Практикуйте разговорную речь') : selected.name === 'Writing' ? say('Fikrlaringizni yozma ifodalang', 'Make your ideas count', 'Выражайте мысли письменно') : selected.name === 'Reading' ? say('Matnni tahlil qiling', 'Read with confidence', 'Читайте уверенно') : say('Diqqat bilan tinglang', 'Train your listening', 'Тренируйте аудирование')}</h1>
-            <p>{say(...selected.summary)}</p>
+            <p>{say(selected.summary[0], selected.summary[1], selected.summary[2])}</p>
             <div className="section-studio-facts">
               <span><CircleHelp size={15} />{selected.name === 'Speaking' ? say('3 ta speaking qismi', '3 speaking parts', '3 части Speaking') : `${selectedExams.reduce((n,e)=>n+e.question_count,0)} ${t.questions}`}</span>
               <span><Clock3 size={15} />{selected.name === 'Speaking' ? '10 min' : selectedExams.length ? `${Math.round(selectedExams.reduce((n,e)=>n+e.duration_seconds,0)/60)} ${t.minutes}` : say('Testlar tez orada', 'Tests coming soon', 'Тесты скоро появятся')}</span>
@@ -115,7 +115,7 @@ export default function TestsPage() {
               <div className="exam-card-top"><span className="skill-icon"><Icon size={24}/></span><span className="access-badge">{unavailable?say('Test tayyor emas','Test unavailable','Тест не готов'):openAccess&&name!=='Speaking'?say('Sinov uchun ochiq','Open for testing','Открыто для тестирования'):locked?<><LockKeyhole size={13}/>{name==='Speaking'?say('Ovozli mashq','Voice practice','Голосовая практика'):say('Pullik','Paid','Платно')}</>:free?t.free:say('Kirish mavjud','Access granted','Доступ открыт')}</span></div>
               <div className="test-card-title"><span className="eyebrow">{name}</span><h3>{exam.title}</h3></div>
               <div className="test-card-stats"><span><CircleHelp size={15}/>{exam.question_count} {t.questions}</span><span><Clock3 size={15}/>{Math.round(exam.duration_seconds/60)} {t.minutes}</span></div>
-              <p className="test-card-description">{selected?.summary ? say(...selected.summary) : detail}</p>
+              <p className="test-card-description">{selected?.summary ? say(selected.summary[0], selected.summary[1], selected.summary[2]) : say(detail[0], detail[1], detail[2])}</p>
               <button className={locked?'secondary':'primary'} disabled={busy||unavailable} onClick={()=>name==='Speaking'?router.push('/dashboard/speaking'):void start(exam)}>{name==='Speaking'?<Mic size={16}/>:locked?<LockKeyhole size={16}/>:<ArrowRight size={16}/>} {unavailable?say('Test ma’lumotlari to‘liq emas','Test content incomplete','Данные теста неполные'):name==='Speaking'?say('Ovozli mashq','Voice practice','Голосовая практика'):locked?say('Mavjudlik holati','Access details','Статус доступа'):t.start}</button>
             </section>;
           });
