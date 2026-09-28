@@ -178,3 +178,19 @@ class DemoContentTests(TestCase):
         self.assertEqual(attempt.snapshot['audio_url'], 'browser-tts://passage')
         self.assertEqual(attempt.answers, {'1': 'East entrance'})
         self.assertEqual(listening.questions.count(), 8)
+
+        listening.audio_url = 'http://localhost:8001/old-audio.mp3'
+        listening.save(update_fields=['audio_url'])
+        attempt.snapshot = {**attempt.snapshot, 'audio_url': listening.audio_url}
+        attempt.save(update_fields=['snapshot'])
+        call_command('seed_demo', stdout=StringIO())
+        listening.refresh_from_db()
+        attempt.refresh_from_db()
+        self.assertEqual(listening.audio_url, 'browser-tts://passage')
+        self.assertEqual(attempt.snapshot['audio_url'], 'browser-tts://passage')
+
+        listening.audio_url = 'https://example.com/custom-audio.mp3'
+        listening.save(update_fields=['audio_url'])
+        call_command('seed_demo', stdout=StringIO())
+        listening.refresh_from_db()
+        self.assertEqual(listening.audio_url, 'https://example.com/custom-audio.mp3')
