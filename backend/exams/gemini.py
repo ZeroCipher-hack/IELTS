@@ -77,9 +77,27 @@ OBJECTIVE_SCHEMA={'type':'OBJECT','properties':{'items':{'type':'ARRAY','items':
  'position':{'type':'INTEGER'},'evidence':{'type':'STRING'},'why':{'type':'STRING'},'next_step':{'type':'STRING'}},
  'required':['position','evidence','why','next_step']}}},'required':['items']}
 
+def objective_mistakes(attempt):
+    try:
+        rows=(attempt.result or {}).get('rows',[])
+        if not isinstance(rows,list):raise TypeError('rows must be a list')
+        mistakes=[]
+        for row in rows:
+            if not isinstance(row,dict) or type(row.get('correct')) is not bool:raise TypeError('invalid result row')
+            if row['correct']:continue
+            position=row.get('position')
+            if type(position) is not int:raise TypeError('missing position')
+            answers=row.get('accepted_answers') or []
+            if not isinstance(answers,list):raise TypeError('invalid answer key')
+            mistakes.append({'position':position,'question':row.get('prompt') or '',
+                'student_answer':row.get('answer') or '', 'correct_answers':answers,
+                'editor_evidence':row.get('evidence') or '',
+                'editor_explanation':row.get('explanation') or ''})
+        return mistakes
+    except (KeyError,TypeError,AttributeError):raise AIError('AI_INVALID_REPORT') from None
+
 def validate_objective_report(data,attempt):
-    rows=attempt.result.get('rows',[]) if attempt.result else []
-    wrong={row['position']:row for row in rows if not row['correct']}
+    wrong={row['position']:row for row in objective_mistakes(attempt)}
     items=data.get('items') if isinstance(data,dict) else None
     if not isinstance(items,list) or len(items)!=len(wrong):raise AIError('AI_INVALID_REPORT')
     source=attempt.snapshot.get('passage','')
@@ -92,16 +110,15 @@ def validate_objective_report(data,attempt):
         for key in ('evidence','why','next_step'):
             if not isinstance(item.get(key),str) or len(item[key])>1200:raise AIError('AI_INVALID_REPORT')
         if item['evidence'] and item['evidence'] not in source:raise AIError('AI_UNSUPPORTED_EVIDENCE')
-        if 'NOT GIVEN' in wrong[position]['accepted_answers'] and item['evidence']:raise AIError('AI_UNSUPPORTED_EVIDENCE')
+        if 'NOT GIVEN' in wrong[position]['correct_answers'] and item['evidence']:raise AIError('AI_UNSUPPORTED_EVIDENCE')
         if not item['why'].strip() or not item['next_step'].strip():raise AIError('AI_INVALID_REPORT')
     return {'kind':'ai_explanation','items':items,'model':settings.GEMINI_WRITING_MODEL,
             'note':'AI practice explanation. The answer-key score stays unchanged.'}
 
 def assess_objective(attempt):
     if attempt.snapshot.get('section') not in ('Reading','Listening') or not attempt.result:raise AIError('AI_INVALID_REPORT')
-    wrong=[{'position':row['position'],'question':row['prompt'],'student_answer':row['answer'],
-            'correct_answers':row['accepted_answers'],'editor_evidence':row['evidence'],
-            'editor_explanation':row['explanation']} for row in attempt.result.get('rows',[]) if not row['correct']]
+    try:wrong=objective_mistakes(attempt)
+    except (KeyError,TypeError):raise AIError('AI_INVALID_REPORT') from None
     if not wrong:return {'kind':'ai_explanation','items':[],'model':settings.GEMINI_WRITING_MODEL,
                          'note':'No wrong answers to explain.'}
     model=settings.GEMINI_WRITING_MODEL

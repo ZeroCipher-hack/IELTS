@@ -112,6 +112,30 @@ class ObjectiveCoachingTests(TestCase):
         self.assertIsNone(refreshed['result']['band'])
         self.assertEqual(refreshed['result']['tutoring']['items'][0]['next_step'],'Matndan sanani belgilang.')
         self.assertEqual(refreshed['tutoring_status'],'done')
+    def test_legacy_result_missing_optional_fields_does_not_crash_worker(self):
+        response=self.start_and_submit('2022')
+        attempt=Attempt.objects.get(pk=response['id'])
+        attempt.result['rows'][0]={'position':1,'correct':False}
+        attempt.save(update_fields=['result'])
+        provider={'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':json.dumps({'items':[
+            {'position':1,'evidence':'','why':'Check the date.','next_step':'Read the passage again.'}]})}]}}]}
+        with patch('exams.gemini.post',return_value=provider) as mocked:
+            self.assertTrue(process_one())
+        payload=json.loads(mocked.call_args.args[1]['contents'][0]['parts'][0]['text'])
+        self.assertEqual(payload['mistakes'][0]['correct_answers'],[])
+        job=AssessmentJob.objects.get(attempt=attempt)
+        self.assertEqual(job.state,'done')
+        attempt.refresh_from_db()
+        self.assertEqual(attempt.result['correct'],0)
+    def test_malformed_legacy_rows_return_ai_error_instead_of_stuck_lease(self):
+        response=self.start_and_submit('2022')
+        attempt=Attempt.objects.get(pk=response['id'])
+        attempt.result['rows']='invalid'
+        attempt.save(update_fields=['result'])
+        self.assertTrue(process_one())
+        job=AssessmentJob.objects.get(attempt=attempt)
+        self.assertEqual(job.state,'pending')
+        self.assertEqual(job.error_code,'AI_INVALID_REPORT')
     def test_rejects_invented_evidence_and_missing_position(self):
         response=self.start_and_submit('2022')
         attempt=Attempt.objects.get(pk=response['id'])
