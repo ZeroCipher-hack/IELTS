@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useProduct } from '@/components/product/product-context';
 import { api, type Attempt } from '@/components/product/api';
@@ -13,36 +13,55 @@ export default function ExamPage() {
   const { t, exams, history, free, load, setError } = useProduct();
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const startRequest = useRef<{ examId: string; promise: Promise<Attempt> } | null>(null);
 
   useEffect(() => {
     let alive = true;
-    (async () => {
-      const exam = exams.find((e) => String(e.id) === params.examId);
-      if (!exam) {
-        // Katalog hali yuklanmagan yoki noto'g'ri ID — testlar sahifasiga qaytaramiz.
-        router.replace('/dashboard/tests');
-        return;
-      }
-      const resuming = history.find((a) => a.state === 'in_progress' && a.section === exam.section && a.title === exam.title);
-      try {
-        if (resuming) {
-          const a = await api<Attempt>(`attempts/${resuming.id}/`);
-          if (alive) { setAttempt(a); setStatus('ready'); }
-          return;
+    const examId = params.examId;
+    let request = startRequest.current?.examId === examId ? startRequest.current.promise : null;
+
+    if (!request) {
+      request = (async () => {
+        const exam = exams.find((e) => String(e.id) === examId);
+        if (!exam) {
+          router.replace('/dashboard/tests');
+          throw new Error('Test topilmadi.');
         }
+        const resuming = history.find((a) => a.state === 'in_progress' && a.section === exam.section && a.title === exam.title);
+        if (resuming) return api<Attempt>(`attempts/${resuming.id}/`);
         if (!free && !exam.has_access) {
           router.replace(`/dashboard/payments?exam=${encodeURIComponent(exam.title)}`);
-          return;
+          throw new Error('Bu testga kirish huquqi yo‘q.');
         }
-        const a = await api<Attempt>('attempts/', 'POST', { exam_id: exam.id, accept_pending_assessment: exam.section === 'Writing' });
+        const attempt = await api<Attempt>('attempts/', 'POST', {
+          exam_id: exam.id,
+          accept_pending_assessment: exam.section === 'Writing',
+        });
         await load();
-        if (alive) { setAttempt(a); setStatus('ready'); }
-      } catch (e) {
-        if (alive) { setError((e as Error).message); setStatus('error'); }
-      }
-    })();
+        return attempt;
+      })();
+      startRequest.current = { examId, promise: request };
+    }
+
+    // React Strict Mode development rejimida effect’ni qayta chaqirishi mumkin.
+    // Bir examId uchun bitta POST va shu Promise natijasini ulashamiz.
+    request
+      .then((value) => {
+        if (alive) {
+          setAttempt(value);
+          setStatus('ready');
+        }
+      })
+      .catch((error: unknown) => {
+        if (alive) {
+          setError((error as Error).message);
+          setStatus('error');
+        }
+        if (startRequest.current?.examId === examId) startRequest.current = null;
+      });
+
     return () => { alive = false; };
-    // exams/history faqat boshlang'ich holatni aniqlash uchun ishlatiladi — qayta yuklanish shart emas.
+    // exams/history faqat boshlang‘ich holatni aniqlash uchun ishlatiladi.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.examId]);
 
