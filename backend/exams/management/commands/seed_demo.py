@@ -1,3 +1,7 @@
+from pathlib import Path
+import shutil
+import subprocess
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.core.exceptions import ValidationError
 from exams.models import Attempt, Exam, Question
@@ -109,6 +113,37 @@ EXAMS = [
     },
 ]
 
+def attach_demo_audio(exam, stdout):
+    """Prefer a real local WAV for the unmodified Listening demo."""
+    if exam.audio_file or exam.audio_url not in ('', 'browser-tts://passage') or exam.passage != LISTENING_SCRIPT:
+        return False
+    engine = shutil.which('espeak-ng')
+    if not engine:
+        stdout.write('Demo audio: espeak-ng topilmadi. sudo apt install espeak-ng')
+        return False
+    name = 'exam_audio/demo-city-history-walk.wav'
+    target = Path(settings.MEDIA_ROOT) / name
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if not target.exists():
+        try:
+            subprocess.run([engine, '-v', 'en-gb', '-s', '135', '-w', str(target), LISTENING_SCRIPT],
+                           check=True, capture_output=True, timeout=30)
+        except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            target.unlink(missing_ok=True)
+            stdout.write('Demo audio yaratilmadi; espeak-ng ni tekshiring.')
+            return False
+    exam.audio_file.name = name
+    exam.save(update_fields=['audio_file'])
+    for attempt in Attempt.objects.filter(exam=exam, state='in_progress'):
+        snapshot = attempt.snapshot
+        if snapshot.get('passage') == LISTENING_SCRIPT and snapshot.get('audio_url') in ('', 'browser-tts://passage'):
+            snapshot['audio_url'] = exam.audio_file.url
+            attempt.snapshot = snapshot
+            attempt.save(update_fields=['snapshot'])
+    stdout.write(f'Demo audio tayyor: {exam.audio_file.url}')
+    return True
+
+
 class Command(BaseCommand):
     help = "Seed original IELTS-style Reading, Listening and Writing practice material without overwriting existing exams."
 
@@ -136,6 +171,8 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.SUCCESS(f"Repaired Listening demo playback source: {spec['title']}"))
                 else:
                     self.stdout.write(f"Already exists, kept unchanged: {spec['title']}")
+                if existing.section == 'Listening':
+                    attach_demo_audio(existing, self.stdout)
                 continue
             questions = spec["questions"]
             exam_data = {key: value for key, value in spec.items() if key != "questions"}
@@ -158,6 +195,8 @@ class Command(BaseCommand):
                 raise
             exam.published = True
             exam.save(update_fields=["published"])
+            if exam.section == 'Listening':
+                attach_demo_audio(exam, self.stdout)
             created += 1
             self.stdout.write(self.style.SUCCESS(f"Created and published: {exam.title}"))
         self.stdout.write(self.style.SUCCESS(f"Seed complete. New exams: {created}; Listening sources repaired: {backfilled_audio}."))
