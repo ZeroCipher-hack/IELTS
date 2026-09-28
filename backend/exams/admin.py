@@ -1,8 +1,19 @@
 from django.contrib import admin,messages
+from django import forms
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from .models import Exam,Question,Attempt,Profile,Entitlement,AssessmentJob
 from .services import validate_exam
+
+class ExamForm(forms.ModelForm):
+    class Meta:
+        model=Exam
+        fields='__all__'
+    def clean_audio_file(self):
+        audio=self.cleaned_data.get('audio_file')
+        if audio and audio.size>20*1024*1024:
+            raise forms.ValidationError('Audio fayl 20 MB dan oshmasin.')
+        return audio
 
 class Questions(admin.StackedInline):
     model=Question
@@ -14,13 +25,14 @@ class Questions(admin.StackedInline):
 
 @admin.register(Exam)
 class ExamAdmin(admin.ModelAdmin):
+    form=ExamForm
     list_display=['title','section','version','published','duration_seconds']
     list_filter=['section','published']
     search_fields=['title']
     inlines=[Questions]
     actions=['publish_checked','duplicate_draft']
     def get_readonly_fields(self,request,obj=None):
-        return ['title','section','version','duration_seconds','passage','audio_url','published'] if obj and obj.published else ['published']
+        return ['title','section','version','duration_seconds','passage','audio_url','audio_file','published'] if obj and obj.published else ['published']
     def has_delete_permission(self,request,obj=None):return not obj or not obj.published
     @admin.action(description='Tekshirish va nashr qilish')
     def publish_checked(self,request,queryset):
