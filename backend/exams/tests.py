@@ -150,7 +150,7 @@ class DemoContentTests(TestCase):
             'Urban gardens — original demo': 5,
             'City History Walk — Listening practice': 8,
             'Community Libraries — Reading practice': 8,
-            'Public Transport — Writing practice': 1,
+            'Public Transport Trends — Writing Task 1 + Task 2 practice': 2,
         }
         for title,count in expected.items():
             exam=Exam.objects.get(title=title)
