@@ -80,6 +80,51 @@ EXAMS = [
         ],
     },
     {
+        "title": "Coastal Wetlands — Reading evidence practice",
+        "section": "Reading",
+        "duration_seconds": 900,
+        "passage": (
+            "In 2019, the coastal town of Harbridge began restoring a wetland beside its old harbour. "
+            "For decades, the site had been used for storing construction materials. The council removed waste and "
+            "opened two shallow channels so that tidal water could return. Volunteers planted native reeds, "
+            "but scientists allowed other plants to grow naturally. By 2022, surveys recorded 34 bird species "
+            "at the site, compared with 19 before the work began. These numbers count species observed during "
+            "survey visits, not the total number of individual birds. The restoration cost 1.2 million pounds; "
+            "a regional environmental fund paid half, and the council paid the rest. "
+            "An elevated wooden path now lets visitors see the wetland without walking through nesting areas. "
+            "The path closes for two weeks each spring to reduce disturbance. A local school uses the site "
+            "for science lessons, although the researchers have not measured any change in pupils' exam scores. "
+            "The team hopes the wetland will reduce flooding nearby, but it has not yet collected enough data "
+            "to confirm that effect. Next year, the council plans to test water quality every month."
+        ),
+        "questions": [
+            ("The wetland had once stored building materials.", ["TRUE", "FALSE", "NOT GIVEN"], ["TRUE"],
+             "For decades, the site had been used for storing construction materials.",
+             "Matnda qurilish materiallari saqlangani bevosita aytilgan.", "True / False / Not Given"),
+            ("The council planted every species now growing at the site.", ["TRUE", "FALSE", "NOT GIVEN"], ["FALSE"],
+             "Volunteers planted native reeds, but scientists allowed other plants to grow naturally.",
+             "Boshqa o‘simliklar tabiiy o‘sgan, hammasi ekilmagan.", "True / False / Not Given"),
+            ("The surveys counted 34 individual birds in 2022.", ["TRUE", "FALSE", "NOT GIVEN"], ["FALSE"],
+             "These numbers count species observed during survey visits, not the total number of individual birds.",
+             "34 soni qush turlarini bildiradi, alohida qushlarni emas.", "True / False / Not Given"),
+            ("The council paid the whole restoration cost.", ["TRUE", "FALSE", "NOT GIVEN"], ["FALSE"],
+             "A regional environmental fund paid half, and the council paid the rest.",
+             "Xarajatning yarmini hududiy jamg‘arma to‘lagan.", "True / False / Not Given"),
+            ("The wooden path stays open throughout spring.", ["TRUE", "FALSE", "NOT GIVEN"], ["FALSE"],
+             "The path closes for two weeks each spring to reduce disturbance.",
+             "Yo‘lak bahorda ikki haftaga yopiladi.", "True / False / Not Given"),
+            ("Science lessons improved pupils' exam scores.", ["TRUE", "FALSE", "NOT GIVEN"], ["NOT GIVEN"],
+             "The researchers have not measured any change in pupils' exam scores.",
+             "Baholar o‘zgargani o‘lchanmagan, natija aytilmagan.", "True / False / Not Given"),
+            ("What fraction of the restoration cost did the regional fund pay?", [], ["half", "one half", "50%"],
+             "A regional environmental fund paid half, and the council paid the rest.",
+             "Jamg‘arma xarajatning yarmini qoplagan.", "Short answer"),
+            ("How often will water quality be tested next year?", [], ["every month", "monthly"],
+             "Next year, the council plans to test water quality every month.",
+             "Suv sifati har oy tekshiriladi.", "Short answer"),
+        ],
+    },
+    {
         "title": "Public Transport Trends — Writing Task 1 + Task 2 practice",
         "section": "Writing",
         "duration_seconds": 3600,
