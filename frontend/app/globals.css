@@ -675,3 +675,77 @@ html[data-theme="dark"] .examiner-character { background:radial-gradient(ellipse
  .speaking-parts-grid { grid-template-columns:1fr; }
  .speaking-part-card { min-height:72px; }
 }
+
+
+/* Full exam route: a clear four-skill briefing and readable practice report. */
+.full-exam-page { display:flex; flex-direction:column; gap:28px; max-width:1320px; margin:0 auto; }
+.full-exam-hero { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr); overflow:hidden; border:1px solid #3654e04d; border-radius:28px; background:linear-gradient(118deg,color-mix(in srgb,var(--primary) 8%,var(--card)),var(--card) 60%); }
+.full-exam-hero-copy { display:flex; flex-direction:column; align-items:flex-start; padding:clamp(26px,4vw,48px); }
+.full-exam-kicker { display:inline-flex; align-items:center; gap:8px; color:var(--primary); font-size:11px; font-weight:850; letter-spacing:1px; }
+.full-exam-hero-copy h1,.full-exam-results-hero h1 { margin-top:16px; font-size:clamp(36px,4.2vw,52px); line-height:1.12; letter-spacing:-1.2px; }
+.full-exam-hero-copy>p,.full-exam-results-hero>p { max-width:650px; margin-top:12px; font-size:15px; line-height:1.7; }
+.full-exam-facts { display:flex; flex-wrap:wrap; gap:9px; margin-top:20px; }
+.full-exam-facts span { display:inline-flex; align-items:center; gap:7px; padding:8px 11px; border:1px solid var(--border); border-radius:999px; background:var(--card); color:var(--muted-foreground); font-size:12px; }
+.full-exam-facts svg { color:var(--primary); }
+.full-exam-start { margin-top:22px; min-width:230px; }
+.full-exam-play-mark { font-size:13px; }
+.full-exam-resume-note { display:flex; align-items:flex-start; gap:9px; margin-top:16px; padding:12px 14px; border:1px solid #0fa88a4a; border-radius:12px; background:#0fa88a12; color:var(--skill-listening); font-size:13px; }
+.full-exam-resume-note svg { flex:0 0 auto; }
+.full-exam-hero-aside { position:relative; display:flex; flex-direction:column; justify-content:center; overflow:hidden; min-height:320px; padding:32px; background:linear-gradient(145deg,#263B9A,#3654E0 58%,#687CF0); color:white; }
+.full-exam-aside-label { position:relative; z-index:1; font-size:10px; font-weight:850; letter-spacing:1.3px; color:#e1e6ff; }
+.full-exam-aside-brand { position:relative; z-index:1; display:flex; align-items:center; gap:13px; margin-top:26px; }
+.full-exam-aside-brand svg { color:#ffe193; }
+.full-exam-aside-brand strong { font-size:24px; line-height:1.1; }
+.full-exam-hero-aside>p { position:relative; z-index:1; max-width:260px; margin-top:18px; color:#eef1ff; font-size:13px; line-height:1.6; }
+.full-exam-flow-line { position:absolute; width:250px; height:250px; right:-65px; top:43px; border:1px solid #ffffff27; border-radius:50%; box-shadow:0 0 0 24px #ffffff12,0 0 0 50px #ffffff0b; }
+.full-exam-steps-section { display:flex; flex-direction:column; gap:17px; }
+.full-exam-section-heading { display:flex; justify-content:space-between; align-items:flex-end; gap:18px; }
+.full-exam-section-heading h2 { margin-top:5px; font-size:26px; }
+.full-exam-access-badge { padding:7px 11px; border:1px solid var(--border); border-radius:999px; background:var(--card); color:var(--muted-foreground); font-size:12px; font-weight:700; }
+.full-exam-steps-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+.full-exam-step { display:flex; flex-direction:column; align-items:flex-start; min-height:215px; padding:19px; border:1px solid var(--border); border-top:3px solid var(--skill-color,var(--primary)); border-radius:18px; background:linear-gradient(145deg,color-mix(in srgb,var(--skill-color,var(--primary)) 6%,var(--card)),var(--card) 75%); }
+.full-exam-step.skill-listening { --skill-color:var(--skill-listening); }
+.full-exam-step.skill-reading { --skill-color:var(--skill-reading); }
+.full-exam-step.skill-writing { --skill-color:var(--skill-writing); }
+.full-exam-step.skill-speaking { --skill-color:var(--skill-speaking); }
+.full-exam-step-top { display:flex; width:100%; align-items:center; justify-content:space-between; }
+.full-exam-step-number { color:var(--skill-color); font-size:12px; font-weight:850; letter-spacing:.7px; }
+.full-exam-step .skill-icon { width:42px; height:42px; border-radius:14px; color:var(--skill-color); background:color-mix(in srgb,var(--skill-color) 13%,var(--card)); }
+.full-exam-step h3 { margin-top:15px; font-size:18px; font-weight:750; }
+.full-exam-step>p { margin-top:5px; font-size:12px; line-height:1.55; }
+.full-exam-step-meta { display:flex; flex-wrap:wrap; gap:7px; margin-top:auto; padding-top:14px; }
+.full-exam-step-meta span { padding:5px 8px; border-radius:8px; background:color-mix(in srgb,var(--skill-color) 10%,var(--card)); color:var(--skill-color); font-size:10px; font-weight:750; }
+.full-exam-disclaimer { padding:14px 16px; border-left:3px solid var(--primary); border-radius:0 12px 12px 0; background:color-mix(in srgb,var(--primary) 5%,var(--card)); font-size:12px; line-height:1.65; }
+.full-exam-results-hero { padding:clamp(24px,4vw,42px); border:1px solid #3654e04a; border-radius:24px; background:linear-gradient(130deg,color-mix(in srgb,var(--primary) 9%,var(--card)),var(--card) 70%); }
+.full-exam-report-score { display:flex; align-items:baseline; gap:12px; margin-top:20px; }
+.full-exam-report-score strong { color:var(--primary); font-size:58px; line-height:1; }
+.full-exam-report-score span { color:var(--muted-foreground); font-size:14px; }
+.full-exam-report-note { display:flex; align-items:flex-start; gap:11px; padding:14px 16px; border:1px solid var(--border); border-radius:14px; background:var(--card); }
+.full-exam-report-note svg { flex:0 0 auto; color:var(--primary); }
+.full-exam-report-note p { font-size:13px; line-height:1.65; }
+.full-exam-report-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.full-exam-result-card { display:flex; flex-direction:column; align-items:flex-start; gap:10px; min-height:200px; padding:20px; border:1px solid var(--border); border-top:3px solid var(--primary); border-radius:18px; background:var(--card); }
+.full-exam-result-card.skill-listening { border-top-color:var(--skill-listening); }
+.full-exam-result-card.skill-reading { border-top-color:var(--skill-reading); }
+.full-exam-result-card.skill-writing { border-top-color:var(--skill-writing); }
+.full-exam-result-card.skill-speaking { border-top-color:var(--skill-speaking); }
+.full-exam-result-card h2 { font-size:17px; line-height:1.4; }
+.full-exam-result-value { color:var(--primary); font-size:28px; font-weight:800; }
+.full-exam-bottom-actions { display:flex; flex-wrap:wrap; align-items:center; gap:14px; }
+@media(max-width:960px) { .full-exam-steps-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:767px) {
+ .full-exam-page { gap:21px; }
+ .full-exam-hero { grid-template-columns:1fr; border-radius:21px; }
+ .full-exam-hero-copy { padding:23px 18px; }
+ .full-exam-hero-copy h1,.full-exam-results-hero h1 { font-size:36px; }
+ .full-exam-hero-aside { min-height:230px; padding:23px; }
+ .full-exam-facts { gap:6px; }
+ .full-exam-facts span { font-size:10px; }
+ .full-exam-section-heading { align-items:flex-start; flex-direction:column; }
+ .full-exam-section-heading h2 { font-size:22px; }
+ .full-exam-steps-grid,.full-exam-report-grid { grid-template-columns:1fr; }
+ .full-exam-step { min-height:185px; }
+ .full-exam-results-hero { padding:22px 18px; }
+ .full-exam-report-score { align-items:flex-start; flex-direction:column; gap:4px; }
+ .full-exam-report-score strong { font-size:50px; }
+}
