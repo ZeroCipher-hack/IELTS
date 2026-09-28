@@ -4,7 +4,7 @@ The primary frontend now uses real Django accounts and data. `/design` preserves
 
 ## Local
 
-For local testing, the `dev.sh` launcher opens published Reading, Listening and Writing tests by default without consuming the account's free attempt. Close this test mode with `EXAMS_OPEN_ACCESS=0 ./dev.sh`. For a manually started backend, export `EXAMS_OPEN_ACCESS=1` before starting Django. The backend default is closed (`EXAMS_OPEN_ACCESS=0`), including production deployments. Unpublished drafts stay private. The local sequential practice flow uses published tests; Speaking remains gated by AI configuration. Speaking practice remains gated separately by its AI configuration.
+For local testing, the `dev.sh` launcher opens published Reading, Listening and Writing tests by default without consuming the account's free attempt. Close this test mode with `EXAMS_OPEN_ACCESS=0 ./dev.sh`. For a manually started backend, export `EXAMS_OPEN_ACCESS=1` before starting Django. The backend default is closed (`EXAMS_OPEN_ACCESS=0`), including production deployments. Unpublished drafts stay private. The local sequential practice flow uses published tests; Speaking remains gated by its AI configuration.
 
 1. Backend: create a virtualenv, install `backend/requirements.txt`.
 2. Set `DJANGO_DEBUG=1`, run `python manage.py migrate` and `python manage.py seed_demo`, then `python manage.py runserver` inside backend. The root `./dev.sh` does these steps automatically.
