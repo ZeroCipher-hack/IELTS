@@ -713,6 +713,9 @@ html[data-theme="dark"] .examiner-character { background:radial-gradient(ellipse
 .full-exam-step .skill-icon { width:42px; height:42px; border-radius:14px; color:var(--skill-color); background:color-mix(in srgb,var(--skill-color) 13%,var(--card)); }
 .full-exam-step h3 { margin-top:15px; font-size:18px; font-weight:750; }
 .full-exam-step>p { margin-top:5px; font-size:12px; line-height:1.55; }
+.full-exam-test-select { display:flex; flex-direction:column; width:100%; gap:7px; margin-top:10px; color:var(--muted-foreground); font-size:12px; font-weight:650; }
+.full-exam-test-select select { width:100%; min-width:0; padding:9px 10px; border:1px solid var(--border); border-radius:10px; background:var(--card); color:var(--foreground); font:inherit; cursor:pointer; }
+.full-exam-test-select select:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
 .full-exam-step-meta { display:flex; flex-wrap:wrap; gap:7px; margin-top:auto; padding-top:14px; }
 .full-exam-step-meta span { padding:5px 8px; border-radius:8px; background:color-mix(in srgb,var(--skill-color) 10%,var(--card)); color:var(--skill-color); font-size:10px; font-weight:750; }
 .full-exam-disclaimer { padding:14px 16px; border-left:3px solid var(--primary); border-radius:0 12px 12px 0; background:color-mix(in srgb,var(--primary) 5%,var(--card)); font-size:12px; line-height:1.65; }
