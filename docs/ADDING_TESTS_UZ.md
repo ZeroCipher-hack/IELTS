@@ -12,6 +12,7 @@ Buyruq mavjud savollarni o‘zgartirmaydi. Eski demo Listening audio manbasi yar
 
 - Listening: City History Walk — 8 savol. `espeak-ng` bo‘lsa WAV fayl yaratiladi; bo‘lmasa brauzerning sintetik ovozi sinab ko‘riladi. Ikkalasi ham mashq uchun sinov ovozi.
 - Reading: Community Libraries — 8 ta True / False / Not Given savoli.
+- Reading: Coastal Wetlands — 8 ta dalil topish, True / False / Not Given va qisqa javob savoli.
 - Writing: Public Transport Trends — Task 1 va Task 2. AI kaliti va worker ishlamasa, javoblar saqlanadi, bahosi kutilayotgan holatda qoladi.
 - Avvalgi Urban gardens Reading demosi saqlanadi.
 
@@ -22,6 +23,14 @@ Buyruqdan keyin localhost’ni yangilang, Testlar sahifasiga o‘ting. Lokal ./d
 ### Brauzerda Listening ovozi eshitilmasa
 
 Kali/Linux tizimida bir marta `sudo apt install espeak-ng` bajaring. Keyin `bash dev.sh` ni qayta ishga tushiring. `Demo audio tayyor: /media/exam_audio/demo-city-history-walk.wav` yozuvi chiqishi kerak. Frontendda Listening testini qayta oching; faol urinishdagi saqlangan javoblar saqlanadi. Audio `/media/` orqali Next.js tomonidan Django’dan uzatiladi. Brauzer orqali sintetik ovoz chiqmasa ham lokal WAV ijro etiladi.
+
+## AI xatolarni qanday tushuntiradi
+
+Reading va Listening javoblari doim testdagi javob kaliti bilan hisoblanadi. Xato bo‘lsa, AI matn yoki transkriptga tayangan holda nima uchun xato ekanini va uni qanday tuzatishni qo‘shimcha tushuntiradi. AI bandni o‘zgartirmaydi. Kalit sozlanmagan, AI kvotasi tugagan yoki xato bo‘lgan holatda ham savolning to‘g‘ri javobi, dalili va muallif yozgan izohi ko‘rinadi.
+
+AI tahlil uchun `backend/.env` faylida `AI_ENABLED=1` va `GEMINI_API_KEY=...` bo‘lsin. `bash dev.sh` ni qayta ishga tushiring: `assess_pending --watch` worker'i fon rejimida tahlil qiladi, natija sahifasi tayyor bo‘lganda yangilanadi. Javoblar AI xizmatiga server tomonidan yuboriladi; kalit frontendga chiqmaydi. Listening audio fayli AI xizmatiga yuborilmaydi: tushuntirish uchun testning passage/transkript matni va javob kaliti ishlatiladi. Haqiqiy Listening testida transkriptni foydalanuvchiga ko‘rsatishni istamasangiz, AI izohi uchun hozircha uni passage maydoniga qo‘shmang; savolga yozilgan tahririy dalil va izohlar ishlatiladi.
+
+Writing va Speaking ilgari mavjud AI baholash oqimidan foydalanadi. Writing bahosi AI yo‘q bo‘lsa kutadi; Speaking uchun mikrofon va Gemini Live ulanishi kerak.
 
 ## Django admin orqali o‘zingiz test qo‘shish
 
