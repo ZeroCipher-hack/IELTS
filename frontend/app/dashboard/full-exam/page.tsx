@@ -42,7 +42,9 @@ export default function FullExamPage() {
     router.push(`/dashboard/tests/${value.ids[0]}?full=1`);
   }
 
-  if (catalogLoading && !isResults) return <LoadingSkeleton label={t.loading} />;\n\n  if (isResults) {
+  if (catalogLoading && !isResults) return <LoadingSkeleton label={t.loading} />;
+
+  if (isResults) {
     if (!flow || !results) return <LoadingSkeleton label={t.loading} />;
     const graded = results.filter(a => a.result?.band != null);
     const avg = graded.length ? (graded.reduce((sum, a) => sum + Number(a.result?.band), 0) / graded.length).toFixed(1) : null;
