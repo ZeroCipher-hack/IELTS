@@ -176,6 +176,35 @@ class ProfileDetailsTests(TestCase):
         self.assertEqual(response.status_code,201)
 
 class DemoContentTests(TestCase):
+    def test_seed_generates_demo_wav_and_updates_active_snapshot(self):
+        import tempfile
+        from pathlib import Path
+        from io import StringIO
+        from django.core.management import call_command
+        with tempfile.TemporaryDirectory() as root, override_settings(MEDIA_ROOT=root):
+            with patch('exams.management.commands.seed_demo.shutil.which', return_value=None):
+                call_command('seed_demo', stdout=StringIO())
+            exam = Exam.objects.get(title='City History Walk — Listening practice')
+            learner = get_user_model().objects.create_user('demo-audio@example.com', password='Strong-Test-123!')
+            attempt = Attempt.objects.create(
+                user=learner, exam=exam, deadline=timezone.now()+timedelta(minutes=5),
+                snapshot={'title':exam.title,'section':'Listening','passage':exam.passage,'audio_url':'browser-tts://passage'},
+                answers={'1':'East entrance'},
+            )
+            def write_wav(args, **kwargs):
+                Path(args[6]).write_bytes(b'RIFF' + b'0'*100)
+            with patch('exams.management.commands.seed_demo.shutil.which', return_value='/usr/bin/espeak-ng'), patch(
+                'exams.management.commands.seed_demo.subprocess.run', side_effect=write_wav
+            ) as generator:
+                call_command('seed_demo', stdout=StringIO())
+            generator.assert_called_once()
+            exam.refresh_from_db()
+            attempt.refresh_from_db()
+            self.assertTrue(exam.audio_file.name.endswith('.wav'))
+            self.assertEqual(attempt.snapshot['audio_url'], exam.audio_file.url)
+            self.assertEqual(attempt.answers, {'1':'East entrance'})
+            self.assertTrue(Path(exam.audio_file.path).is_file())
+
     @patch('exams.management.commands.seed_demo.shutil.which', return_value=None)
     def test_seed_demo_adds_original_practice_exams_idempotently(self, _mock_which):
         from io import StringIO
