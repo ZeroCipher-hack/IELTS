@@ -34,7 +34,7 @@ class ExamFlowTests(TestCase):
         listening = Exam.objects.create(
             title='Legacy listening', section='Listening', published=True,
             duration_seconds=600, audio_url='http://localhost:8001/audio.mp3',
-            passage='Transcript for browser speech.',
+            passage='',
         )
         Question.objects.create(
             exam=listening, position=1, prompt='Where is the meeting?',
@@ -43,8 +43,9 @@ class ExamFlowTests(TestCase):
         def entry():
             return next(exam for exam in self.client.get('/api/catalog/').json()['exams'] if exam['id'] == listening.pk)
         self.assertFalse(entry()['ready'])
-        listening.audio_url = 'browser-tts://passage'
-        listening.save(update_fields=['audio_url'])
+        listening.audio_url = ''
+        listening.passage = 'Transcript for browser speech.'
+        listening.save(update_fields=['audio_url', 'passage'])
         self.assertTrue(entry()['ready'])
 
     def test_catalog_access_is_personal_and_resumable(self):
@@ -178,6 +179,7 @@ class ProfileDetailsTests(TestCase):
 class DemoContentTests(TestCase):
     def test_seed_generates_demo_wav_and_updates_active_snapshot(self):
         import tempfile
+        import wave
         from pathlib import Path
         from io import StringIO
         from django.core.management import call_command
@@ -192,7 +194,11 @@ class DemoContentTests(TestCase):
                 answers={'1':'East entrance'},
             )
             def write_wav(args, **kwargs):
-                Path(args[6]).write_bytes(b'RIFF' + b'0'*100)
+                with wave.open(str(args[6]), 'wb') as audio:
+                    audio.setnchannels(1)
+                    audio.setsampwidth(2)
+                    audio.setframerate(16000)
+                    audio.writeframes(b'\x00\x00' * 320)
             with patch('exams.management.commands.seed_demo.shutil.which', return_value='/usr/bin/espeak-ng'), patch(
                 'exams.management.commands.seed_demo.subprocess.run', side_effect=write_wav
             ) as generator:
@@ -203,6 +209,16 @@ class DemoContentTests(TestCase):
             self.assertTrue(exam.audio_file.name.endswith('.wav'))
             self.assertEqual(attempt.snapshot['audio_url'], exam.audio_file.url)
             self.assertEqual(attempt.answers, {'1':'East entrance'})
+            self.assertTrue(Path(exam.audio_file.path).is_file())
+            with wave.open(exam.audio_file.path, 'rb') as audio:
+                self.assertEqual(audio.getnframes(), 320)
+                self.assertEqual(audio.getframerate(), 16000)
+            Path(exam.audio_file.path).unlink()
+            with patch('exams.management.commands.seed_demo.shutil.which', return_value='/usr/bin/espeak-ng'), patch(
+                'exams.management.commands.seed_demo.subprocess.run', side_effect=write_wav
+            ) as generator:
+                call_command('seed_demo', stdout=StringIO())
+            generator.assert_called_once()
             self.assertTrue(Path(exam.audio_file.path).is_file())
 
     @patch('exams.management.commands.seed_demo.attach_demo_audio', return_value=False)
@@ -222,7 +238,7 @@ class DemoContentTests(TestCase):
             exam=Exam.objects.get(title=title)
             self.assertTrue(exam.published)
             self.assertEqual(exam.questions.count(),count)
-        self.assertEqual(Exam.objects.get(title='City History Walk — Listening practice').audio_url,'browser-tts://passage')
+        self.assertEqual(Exam.objects.get(title='City History Walk — Listening practice').audio_url,'')
 
         listening = Exam.objects.get(title='City History Walk — Listening practice')
         listening.audio_url = ''
@@ -240,8 +256,8 @@ class DemoContentTests(TestCase):
         self.assertEqual(Exam.objects.count(),len(expected))
         listening.refresh_from_db()
         attempt.refresh_from_db()
-        self.assertEqual(listening.audio_url, 'browser-tts://passage')
-        self.assertEqual(attempt.snapshot['audio_url'], 'browser-tts://passage')
+        self.assertEqual(listening.audio_url, '')
+        self.assertEqual(attempt.snapshot['audio_url'], '')
         self.assertEqual(attempt.answers, {'1': 'East entrance'})
         self.assertEqual(listening.questions.count(), 8)
 
@@ -252,8 +268,8 @@ class DemoContentTests(TestCase):
         call_command('seed_demo', stdout=StringIO())
         listening.refresh_from_db()
         attempt.refresh_from_db()
-        self.assertEqual(listening.audio_url, 'browser-tts://passage')
-        self.assertEqual(attempt.snapshot['audio_url'], 'browser-tts://passage')
+        self.assertEqual(listening.audio_url, '')
+        self.assertEqual(attempt.snapshot['audio_url'], '')
 
         listening.audio_url = 'https://example.com/custom-audio.mp3'
         listening.save(update_fields=['audio_url'])

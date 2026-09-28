@@ -41,7 +41,6 @@ EXAMS = [
         "section": "Listening",
         "duration_seconds": 480,
         "passage": LISTENING_SCRIPT,
-        "audio_url": "browser-tts://passage",
         "questions": [
             ("Where should participants meet?", ["West entrance", "East entrance", "Main station"], ["East entrance"], LISTENING_SCRIPT, "Muzeyning sharqiy kirish joyi aytiladi.", "Multiple choice"),
             ("What time should participants meet?", ["9:00", "9:15", "9:30"], ["9:15"], LISTENING_SCRIPT, "“Quarter past nine” — 9:15.", "Multiple choice"),
@@ -160,11 +159,12 @@ EXAMS = [
 
 def attach_demo_audio(exam, stdout):
     """Prefer a real local WAV for the unmodified Listening demo."""
-    if exam.audio_file or exam.audio_url not in ('', 'browser-tts://passage') or exam.passage != LISTENING_SCRIPT:
-        return False
     name = 'exam_audio/demo-city-history-walk.wav'
+    if (exam.passage != LISTENING_SCRIPT or exam.audio_url.startswith('https://')
+            or (exam.audio_file and exam.audio_file.name != name)):
+        return False
     target = Path(settings.MEDIA_ROOT) / name
-    if not target.is_file():
+    if not valid_wav(target):
         engine = shutil.which('espeak-ng')
         if not engine:
             stdout.write('Demo audio: espeak-ng topilmadi. sudo apt install espeak-ng')
@@ -177,21 +177,30 @@ def attach_demo_audio(exam, stdout):
             target.unlink(missing_ok=True)
             stdout.write('Demo audio yaratilmadi; espeak-ng ni tekshiring.')
             return False
-    if not target.is_file() or target.stat().st_size <= 44:
+    if not valid_wav(target):
         target.unlink(missing_ok=True)
-        stdout.write('Demo audio fayli bo‘sh; espeak-ng ni tekshiring.')
+        stdout.write('Demo audio fayli yaroqsiz; espeak-ng ni tekshiring.')
         return False
-    exam.audio_file.name = name
-    exam.audio_url = ''
-    exam.save(update_fields=['audio_file', 'audio_url'])
+    if exam.audio_file.name != name or exam.audio_url:
+        exam.audio_file.name = name
+        exam.audio_url = ''
+        exam.save(update_fields=['audio_file', 'audio_url'])
     for attempt in Attempt.objects.filter(exam=exam, state='in_progress'):
         snapshot = attempt.snapshot
-        if snapshot.get('passage') == LISTENING_SCRIPT and snapshot.get('audio_url') in ('', 'browser-tts://passage'):
+        if snapshot.get('passage') == LISTENING_SCRIPT and not str(snapshot.get('audio_url') or '').startswith('https://') and snapshot.get('audio_url') != exam.audio_file.url:
             snapshot['audio_url'] = exam.audio_file.url
             attempt.snapshot = snapshot
             attempt.save(update_fields=['snapshot'])
     stdout.write(f'Demo audio tayyor: {exam.audio_file.url}')
     return True
+
+
+def valid_wav(path):
+    if not path.is_file() or path.stat().st_size <= 44:
+        return False
+    with path.open('rb') as source:
+        header = source.read(12)
+    return header[:4] == b'RIFF' and header[8:12] == b'WAVE'
 
 
 class Command(BaseCommand):
@@ -203,18 +212,15 @@ class Command(BaseCommand):
         for spec in EXAMS:
             existing = Exam.objects.filter(title=spec["title"]).first()
             if existing:
-                # Older local demo rows may predate the browser TTS fallback. Only
-                # fill a missing audio source; never replace a real URL or content.
-                audio_url = spec.get("audio_url", "")
-                usable_audio = bool(existing.audio_file) or existing.audio_url.startswith("https://") or existing.audio_url == "browser-tts://passage"
-                if existing.section == "Listening" and audio_url and not usable_audio:
-                    existing.audio_url = audio_url
+                # Only repair the known demo. Keep user-supplied HTTPS audio and uploads.
+                if existing.section == "Listening" and existing.passage == LISTENING_SCRIPT and not existing.audio_file and existing.audio_url and not existing.audio_url.startswith('https://'):
+                    existing.audio_url = ''
                     existing.save(update_fields=["audio_url"])
                     for attempt in Attempt.objects.filter(exam=existing, state="in_progress"):
                         snapshot = attempt.snapshot
                         saved_audio = str(snapshot.get("audio_url") or "")
-                        if not (saved_audio.startswith("https://") or saved_audio == "browser-tts://passage"):
-                            snapshot["audio_url"] = audio_url
+                        if not saved_audio.startswith("https://"):
+                            snapshot["audio_url"] = ''
                             attempt.snapshot = snapshot
                             attempt.save(update_fields=["snapshot"])
                     backfilled_audio += 1
