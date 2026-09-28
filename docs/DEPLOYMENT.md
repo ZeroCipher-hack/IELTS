@@ -25,6 +25,8 @@ For local testing, the `dev.sh` launcher opens published Reading, Listening and 
 
 Caddy obtains HTTPS certificates. Database and backend have no public port mapping. Trust forwarded HTTPS only behind this proxy. Do not expose backend directly when DJANGO_TRUST_PROXY=1.
 
+Uploaded exam audio lives on a persistent `exam_media` volume. In production (`DJANGO_DEBUG=0`) Django does not serve `/media/`: Caddy serves this read-only volume with byte range support, `Content-Disposition: inline` and `X-Content-Type-Options: nosniff`. Only upload trusted audio; the application checks extension, MIME and file signature. If using object storage instead, configure its public `/media/` delivery to support byte ranges, audio MIME, `nosniff`, and a safe Content-Disposition, and persist uploads independently of app containers. Keep the volume in backups. Production workers should use PostgreSQL: SQLite does not support row-level `select_for_update()` and is for local development only.
+
 Run `docker compose exec -T backend python manage.py expire_attempts` every minute via the server scheduler. Expired attempts also finalize when the student opens their history or attempt. No always-on AI worker is installed yet.
 
 Run `sh deploy/backup.sh /private/path/backups` daily from the repository root. Copy backups to separate storage. Test restoration into a separate empty database with `pg_restore`; do not overwrite the live database during a restoration test. Monitor disk space, TLS, errors and backup age.
