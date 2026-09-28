@@ -12,7 +12,7 @@ Buyruq mavjud testlarni o‘zgartirmaydi. U original sinov materiallarini qo‘s
 
 - Listening: City History Walk — 8 savol. Brauzer matnni inglizcha ovozda o‘qiydi. Bu haqiqiy audio emas, faqat oqimni tekshirish uchun sintetik ovoz.
 - Reading: Community Libraries — 8 ta True / False / Not Given savoli.
-- Writing: Public Transport — Task 2. AI kaliti va worker ishlamasa, javob saqlanadi, bahosi kutilayotgan holatda qoladi.
+- Writing: Public Transport Trends — Task 1 va Task 2. AI kaliti va worker ishlamasa, javoblar saqlanadi, bahosi kutilayotgan holatda qoladi.
 - Avvalgi Urban gardens Reading demosi saqlanadi.
 
 Speaking alohida savol-javob testi emas: mavjud AI Speaking mashq sahifasi orqali ishlaydi. Uni sinash uchun serverda AI kaliti va kerakli Speaking sozlamalari yoqilgan bo‘lishi kerak. To‘liq imtihonda sozlanmagan bo‘lsa o‘tkazib yuborish mumkin.
@@ -42,7 +42,7 @@ Nashr qilingan test urinishlarga snapshot sifatida nusxalanadi va admin orqali t
 |---|---|
 | Listening | Ishlaydigan HTTPS audio manzili, savollar, variantlar va to‘g‘ri javoblar. Haqiqiy testda audio skriptini passage maydoniga kiritmang — foydalanuvchiga ko‘rinadi. |
 | Reading | Matn, savollar, variantlar va javob kalitlari. True / False / Not Given variantlarini aynan TRUE, FALSE, NOT GIVEN deb yozing. |
-| Writing | Prompt, bo‘sh variantlar [] va bo‘sh kalit []. Task 1 diagrammalarini hozircha AI baholashga nashr qilmang. |
+| Writing | Prompt, bo‘sh variantlar [] va bo‘sh kalit []. Hozirgi demo Task 1 uchun raqamlarni matnli jadval ko‘rinishida beradi; rasmli diagrammani AI baholashga nashr qilmang. |
 | Speaking | Admin savollaridan foydalanmaydi. AI mashqi alohida yoqiladi; to‘liq IELTS Speaking baholashi deb ko‘rsatmang. |
 
 Listening audio faylini HTTPS havola beradigan server yoki fayl xizmatiga joylang. Havola brauzerda login talab qilmasdan ochilishi kerak. Faqat foydalanish huquqingiz bor audio qo‘shing.
