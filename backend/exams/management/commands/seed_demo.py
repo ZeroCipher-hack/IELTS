@@ -133,7 +133,8 @@ def attach_demo_audio(exam, stdout):
             stdout.write('Demo audio yaratilmadi; espeak-ng ni tekshiring.')
             return False
     exam.audio_file.name = name
-    exam.save(update_fields=['audio_file'])
+    exam.audio_url = ''
+    exam.save(update_fields=['audio_file', 'audio_url'])
     for attempt in Attempt.objects.filter(exam=exam, state='in_progress'):
         snapshot = attempt.snapshot
         if snapshot.get('passage') == LISTENING_SCRIPT and snapshot.get('audio_url') in ('', 'browser-tts://passage'):
