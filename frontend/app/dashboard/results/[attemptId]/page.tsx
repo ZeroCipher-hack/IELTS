@@ -22,7 +22,7 @@ export default function ResultDetailPage() {
 
   // Hali baholanmagan bo'lsa — polling.
   useEffect(() => {
-    if (!attempt || attempt.state !== 'awaiting_assessment' || attempt.assessment_status === 'failed' || attempt.assessment_status === 'disabled') return;
+    if (!attempt || !(attempt.state === 'awaiting_assessment' && attempt.assessment_status !== 'failed' && attempt.assessment_status !== 'disabled') && !(['pending','running'].includes(attempt.tutoring_status || '') && !attempt.result?.tutoring)) return;
     let alive = true;
     let pending = false;
     const id = setInterval(() => {
