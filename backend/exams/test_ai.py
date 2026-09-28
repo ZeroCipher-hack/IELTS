@@ -169,6 +169,27 @@ class ObjectiveCoachingTests(TestCase):
         with self.assertRaises(AIError):
             validate_objective_report({'items':[{'position':1,'evidence':'The council planted native reeds in 2021.',
                 'why':'No evidence for the claim.','next_step':'Compare the exact statement.'}]},attempt)
+        attempt.result['rows'][0]['accepted_answers']=['not given']
+        with self.assertRaises(AIError):
+            validate_objective_report({'items':[{'position':1,'evidence':'The council planted native reeds in 2021.',
+                'why':'No evidence for the claim.','next_step':'Compare the exact statement.'}]},attempt)
+
+    def test_batches_and_keeps_partial_objective_explanations(self):
+        response=self.start_and_submit('2022')
+        attempt=Attempt.objects.get(pk=response['id'])
+        attempt.result['rows']=[{**attempt.result['rows'][0],'position':n} for n in range(1,18)]
+        attempt.save(update_fields=['result'])
+        def respond(path,body):
+            payload=json.loads(body['contents'][0]['parts'][0]['text'])
+            positions=[row['position'] for row in payload['mistakes']]
+            if positions[0]==1:raise AIError('AI_INCOMPLETE_REPORT')
+            items=[{'position':positions[0],'evidence':'','why':'Review the date.','next_step':'Read it again.'}]
+            return {'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':json.dumps({'items':items})}]}}]}
+        with patch('exams.gemini.post',side_effect=respond) as mocked:
+            report=assess_objective(attempt)
+        self.assertEqual(mocked.call_count,3)
+        self.assertEqual(report['covered_positions'],[9,17])
+        self.assertEqual(report['missing_positions'],[1,2,3,4,5,6,7,8,10,11,12,13,14,15,16])
 
     def test_provider_returns_validated_explanation(self):
         response=self.start_and_submit('2022')

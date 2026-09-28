@@ -96,30 +96,32 @@ def objective_mistakes(attempt):
         return mistakes
     except (KeyError,TypeError,AttributeError):raise AIError('AI_INVALID_REPORT') from None
 
-def validate_objective_report(data,attempt):
+def validate_objective_report(data,attempt,expected_positions=None):
     wrong={row['position']:row for row in objective_mistakes(attempt)}
+    expected=set(wrong) if expected_positions is None else set(expected_positions)
+    if not expected or not expected.issubset(wrong):raise AIError('AI_INVALID_REPORT')
     items=data.get('items') if isinstance(data,dict) else None
-    if not isinstance(items,list) or len(items)!=len(wrong):raise AIError('AI_INVALID_REPORT')
+    if not isinstance(items,list) or not items or len(items)>len(expected):raise AIError('AI_INVALID_REPORT')
     source=attempt.snapshot.get('passage','')
     seen=set()
     for item in items:
         if not isinstance(item,dict):raise AIError('AI_INVALID_REPORT')
         position=item.get('position')
-        if type(position) is not int or position not in wrong or position in seen:raise AIError('AI_INVALID_REPORT')
+        if type(position) is not int or position not in expected or position in seen:raise AIError('AI_INVALID_REPORT')
         seen.add(position)
         for key in ('evidence','why','next_step'):
             if not isinstance(item.get(key),str) or len(item[key])>1200:raise AIError('AI_INVALID_REPORT')
         if item['evidence'] and item['evidence'] not in source:raise AIError('AI_UNSUPPORTED_EVIDENCE')
-        if 'NOT GIVEN' in wrong[position]['correct_answers'] and item['evidence']:raise AIError('AI_UNSUPPORTED_EVIDENCE')
+        if any(isinstance(answer,str) and answer.strip().casefold()=='not given' for answer in wrong[position]['correct_answers']) and item['evidence']:raise AIError('AI_UNSUPPORTED_EVIDENCE')
         if not item['why'].strip() or not item['next_step'].strip():raise AIError('AI_INVALID_REPORT')
-    return {'kind':'ai_explanation','items':items,'model':settings.GEMINI_WRITING_MODEL,
+    return {'kind':'ai_explanation','items':items,'covered_positions':sorted(seen),'missing_positions':sorted(set(wrong)-seen),'model':settings.GEMINI_WRITING_MODEL,
             'note':'AI practice explanation. The answer-key score stays unchanged.'}
 
 def assess_objective(attempt):
     if attempt.snapshot.get('section') not in ('Reading','Listening') or not attempt.result:raise AIError('AI_INVALID_REPORT')
     try:wrong=objective_mistakes(attempt)
     except (KeyError,TypeError):raise AIError('AI_INVALID_REPORT') from None
-    if not wrong:return {'kind':'ai_explanation','items':[],'model':settings.GEMINI_WRITING_MODEL,
+    if not wrong:return {'kind':'ai_explanation','items':[],'covered_positions':[],'missing_positions':[],'model':settings.GEMINI_WRITING_MODEL,
                          'note':'No wrong answers to explain.'}
     model=settings.GEMINI_WRITING_MODEL
     if not re.fullmatch(r'[A-Za-z0-9._-]+',model):raise AIError('AI_MODEL_INVALID')
@@ -129,15 +131,29 @@ def assess_objective(attempt):
       'answer is wrong, and a concrete next step. Evidence must be an EXACT substring of the supplied source; leave it '
       'empty when the correct answer is NOT GIVEN or when no supporting text exists. Do not invent quotations. '
       'Explain why and next_step in '+attempt.snapshot.get('feedback_language','uz')+'.')
-    payload={'section':attempt.snapshot['section'],'source':attempt.snapshot.get('passage',''),'mistakes':wrong}
-    response=post('models/'+model+':generateContent',{'systemInstruction':{'parts':[{'text':instructions}]},
-        'contents':[{'role':'user','parts':[{'text':json.dumps(payload,ensure_ascii=False)}]}],
-        'generationConfig':{'temperature':0,'maxOutputTokens':4096,'responseMimeType':'application/json',
-                            'responseSchema':OBJECTIVE_SCHEMA}})
-    try:
-        candidate=response['candidates'][0]
-        if candidate.get('finishReason')!='STOP':raise AIError('AI_INCOMPLETE_REPORT')
-        raw=''.join(p.get('text','') for p in candidate['content']['parts'] if not p.get('thought'))
-        report=json.loads(raw)
-    except (KeyError,IndexError,TypeError,ValueError):raise AIError('AI_INVALID_REPORT') from None
-    return validate_objective_report(report,attempt)
+    source=attempt.snapshot.get('passage') or ''
+    if not isinstance(source,str):raise AIError('AI_INVALID_REPORT')
+    items=[];last_error=None
+    for offset in range(0,len(wrong),8):
+        batch=wrong[offset:offset+8]
+        payload={'section':attempt.snapshot['section'],'source':source[:16000],'mistakes':batch}
+        try:
+            response=post('models/'+model+':generateContent',{'systemInstruction':{'parts':[{'text':instructions}]},
+                'contents':[{'role':'user','parts':[{'text':json.dumps(payload,ensure_ascii=False)}]}],
+                'generationConfig':{'temperature':0,'maxOutputTokens':4096,'responseMimeType':'application/json',
+                                    'responseSchema':OBJECTIVE_SCHEMA}})
+            candidate=response['candidates'][0]
+            if candidate.get('finishReason')!='STOP':raise AIError('AI_INCOMPLETE_REPORT')
+            raw=''.join(p.get('text','') for p in candidate['content']['parts'] if not p.get('thought'))
+            report=json.loads(raw)
+            validated=validate_objective_report(report,attempt,{row['position'] for row in batch})
+            items.extend(validated['items'])
+        except (KeyError,IndexError,TypeError,ValueError):last_error=AIError('AI_INVALID_REPORT')
+        except AIError as exc:
+            last_error=exc
+            if str(exc)=='AI_RATE_LIMIT':break
+    if not items:raise last_error or AIError('AI_INVALID_REPORT')
+    covered={item['position'] for item in items}
+    return {'kind':'ai_explanation','items':items,'covered_positions':sorted(covered),
+            'missing_positions':sorted(row['position'] for row in wrong if row['position'] not in covered),
+            'model':model,'note':'AI practice explanation. The answer-key score stays unchanged.'}
