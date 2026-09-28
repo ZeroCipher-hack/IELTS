@@ -29,7 +29,7 @@ export default function ResultDetailPage() {
       if (pending) return;
       pending = true;
       api<Attempt>(`attempts/${attempt.id}/`)
-        .then((a) => { if (!alive) return; setAttempt(a); if (a.state === 'graded') void load(true).catch(() => {}); })
+        .then((a) => { if (!alive) return; setAttempt(a); if (attempt.state === 'awaiting_assessment' && a.state === 'graded') void load(true).catch(() => {}); })
         .catch(() => {})
         .finally(() => { pending = false; });
     }, 5000);
