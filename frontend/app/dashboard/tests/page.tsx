@@ -24,6 +24,7 @@ export default function TestsPage() {
   const selectedExams = selected ? exams.filter((exam) => exam.section === selected.name) : [];
 
   async function start(exam: (typeof exams)[number]) {
+    if (exam.ready === false && !history.some((a) => a.state === 'in_progress' && a.section === exam.section && a.title === exam.title)) return;
     if (!openAccess && !free && !exam.has_access && !history.some((a) => a.state === 'in_progress' && a.section === exam.section && a.title === exam.title)) {
       router.push(`/dashboard/payments?exam=${encodeURIComponent(exam.title)}`);
       return;
@@ -108,13 +109,14 @@ export default function TestsPage() {
         {sections.filter((s)=>sectionFilter==='All'||s.name===sectionFilter).flatMap(({name,Icon,detail})=>{
           const entries=exams.filter((e)=>e.section===name);
           if(entries.length)return entries.map((exam)=>{
+            const unavailable=exam.ready===false && !history.some(a=>a.state==='in_progress' && a.section===exam.section && a.title===exam.title);
             const locked=(!openAccess&&!free&&!exam.has_access)||name==='Speaking';
             return <section className={'panel exam-card skill-'+name.toLowerCase()} key={exam.id}>
-              <div className="exam-card-top"><span className="skill-icon"><Icon size={24}/></span><span className="access-badge">{openAccess&&name!=='Speaking'?say('Sinov uchun ochiq','Open for testing','Открыто для тестирования'):locked?<><LockKeyhole size={13}/>{name==='Speaking'?say('Ovozli mashq','Voice practice','Голосовая практика'):say('Pullik','Paid','Платно')}</>:free?t.free:say('Kirish mavjud','Access granted','Доступ открыт')}</span></div>
+              <div className="exam-card-top"><span className="skill-icon"><Icon size={24}/></span><span className="access-badge">{unavailable?say('Test tayyor emas','Test unavailable','Тест не готов'):openAccess&&name!=='Speaking'?say('Sinov uchun ochiq','Open for testing','Открыто для тестирования'):locked?<><LockKeyhole size={13}/>{name==='Speaking'?say('Ovozli mashq','Voice practice','Голосовая практика'):say('Pullik','Paid','Платно')}</>:free?t.free:say('Kirish mavjud','Access granted','Доступ открыт')}</span></div>
               <div className="test-card-title"><span className="eyebrow">{name}</span><h3>{exam.title}</h3></div>
               <div className="test-card-stats"><span><CircleHelp size={15}/>{exam.question_count} {t.questions}</span><span><Clock3 size={15}/>{Math.round(exam.duration_seconds/60)} {t.minutes}</span></div>
               <p className="test-card-description">{selected?.summary ? say(...selected.summary) : detail}</p>
-              <button className={locked?'secondary':'primary'} disabled={busy} onClick={()=>name==='Speaking'?router.push('/dashboard/speaking'):void start(exam)}>{name==='Speaking'?<Mic size={16}/>:locked?<LockKeyhole size={16}/>:<ArrowRight size={16}/>} {name==='Speaking'?say('Ovozli mashq','Voice practice','Голосовая практика'):locked?say('Mavjudlik holati','Access details','Статус доступа'):t.start}</button>
+              <button className={locked?'secondary':'primary'} disabled={busy||unavailable} onClick={()=>name==='Speaking'?router.push('/dashboard/speaking'):void start(exam)}>{name==='Speaking'?<Mic size={16}/>:locked?<LockKeyhole size={16}/>:<ArrowRight size={16}/>} {unavailable?say('Test ma’lumotlari to‘liq emas','Test content incomplete','Данные теста неполные'):name==='Speaking'?say('Ovozli mashq','Voice practice','Голосовая практика'):locked?say('Mavjudlik holati','Access details','Статус доступа'):t.start}</button>
             </section>;
           });
           return [<section className={'panel exam-card skill-'+name.toLowerCase()} key={name}>
