@@ -1,6 +1,6 @@
 from django.test import SimpleTestCase, override_settings
 
-from .voice import CUE, PART1_QUESTIONS, PART3_QUESTIONS, constraints
+from .voice import CUE, PART1_QUESTIONS, PART3_QUESTIONS, access, constraints
 
 
 @override_settings(GEMINI_LIVE_MODEL='test-live-model')
@@ -29,3 +29,16 @@ class SpeakingScriptTests(SimpleTestCase):
         self.assertEqual(positions, sorted(positions))
         self.assertIn(CUE['title'], prompt)
         self.assertNotIn(PART1_QUESTIONS[0], prompt)
+
+    @override_settings(AI_ENABLED=True, GEMINI_API_KEY='test-key', VOICE_PRACTICE_ENABLED=True)
+    def test_status_exposes_the_same_questions_as_the_locked_token(self):
+        class User:
+            is_staff = False
+
+        status = access(User())
+        self.assertEqual(tuple(status['questions']['1']), PART1_QUESTIONS)
+        self.assertEqual(tuple(status['questions']['3']), PART3_QUESTIONS)
+        for part in (1, 3):
+            prompt = self.instruction(part)
+            for question in status['questions'][str(part)]:
+                self.assertIn(question, prompt)
