@@ -363,6 +363,7 @@ textarea { width: 100%; resize: vertical; }
 .examiner-portrait img { display:block; width:100%; }
 .examiner-label { position:absolute; bottom:16px; left:16px; padding:8px 12px; background:var(--card); color:var(--foreground); border-radius:8px; font-size:12px; }
 .voice-state { color:var(--accent-foreground); }
+.speaking-current-question { max-width:38rem; margin:0 auto 1rem; color:var(--foreground); font-size:1.1rem; line-height:1.55; font-weight:600; }
 .voice-wave { display:flex; align-items:center; justify-content:center; gap:4px; height:72px; width:100%; }
 .voice-wave span { width:4px; border-radius:4px; background:var(--primary); }
 .voice-controls { display:flex; flex-wrap:wrap; gap:var(--space-3); justify-content:center; }
