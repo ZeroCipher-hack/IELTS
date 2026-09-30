@@ -245,3 +245,18 @@ class ObjectiveCoachingTests(TestCase):
         self.assertTrue(AssessmentJob.objects.filter(attempt_id=first['id']).exists())
         self.assertFalse(AssessmentJob.objects.filter(attempt_id=second['id']).exists())
         self.assertEqual(second['result']['correct'],0)
+
+class ListeningTranscriptTests(TestCase):
+    def test_evidence_uses_private_transcript_and_legacy_passage_fallback(self):
+        from types import SimpleNamespace
+        attempt=SimpleNamespace(snapshot={'section':'Listening','passage':'Demo text.',
+            'listening_transcript':'Tickets cost eighteen pounds.'},
+            result={'rows':[{'position':1,'correct':False,'prompt':'How much?',
+                'answer':'80','accepted_answers':['18']}]})
+        data={'items':[{'position':1,'evidence':'eighteen pounds','why':'The recording says eighteen.',
+            'next_step':'Compare eighteen and eighty.'}]}
+        self.assertEqual(validate_objective_report(data,attempt)['covered_positions'],[1])
+        data['items'][0]['evidence']='Demo text.'
+        with self.assertRaises(AIError):validate_objective_report(data,attempt)
+        del attempt.snapshot['listening_transcript']
+        self.assertEqual(validate_objective_report(data,attempt)['covered_positions'],[1])

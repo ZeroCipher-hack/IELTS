@@ -9,6 +9,8 @@ class ExamForm(forms.ModelForm):
     class Meta:
         model=Exam
         fields='__all__'
+        labels={'audio_file':'Audio fayl', 'audio_url':'HTTPS audio havola', 'listening_transcript':'Yashirin audio transkripti (AI uchun)'}
+        help_texts={'audio_file':'MP3, WAV, OGG, M4A yoki WebM; ko‘pi bilan 20 MB. Yuklangan fayl havoladan ustun.', 'audio_url':'Ixtiyoriy: login talab qilmaydigan bevosita HTTPS audio fayl manzili.', 'listening_transcript':'Audio matnini aynan yozing. Topshiruvchiga ko‘rsatilmaydi; AI xatolarga dalil topishda ishlatadi.'}
     def clean_audio_file(self):
         audio=self.cleaned_data.get('audio_file')
         if audio and audio.size>20*1024*1024:
@@ -33,7 +35,7 @@ class QuestionForm(forms.ModelForm):
         model = Question
         fields = '__all__'
         labels = {'position': 'Savol raqami', 'prompt': 'Savol (ingliz tilida)', 'evidence': 'Matndan aniq dalil', 'explanation': 'Xatoni tushuntirish va to‘g‘rilash', 'skill_tag': 'Savol turi'}
-        help_texts = {'evidence': 'Reading matnidan aynan ko‘chirilgan jumla. NOT GIVEN uchun bo‘sh qoldiring.', 'explanation': 'To‘g‘ri javobga qanday kelish va shu xatoni qayta qilmaslikni tushuntiring.', 'skill_tag': 'Masalan: true_false_not_given, matching_headings, short_answer.'}
+        help_texts = {'evidence': 'Reading matni yoki Listening transkriptidan aynan jumlani kiriting. NOT GIVEN uchun bo‘sh qoldiring.', 'explanation': 'To‘g‘ri javobga qanday kelish va shu xatoni qayta qilmaslikni tushuntiring.', 'skill_tag': 'Masalan: true_false_not_given, matching_headings, short_answer.'}
 
 class Questions(admin.StackedInline):
     form=QuestionForm
@@ -54,12 +56,12 @@ class ExamAdmin(admin.ModelAdmin):
     search_fields=['title']
     inlines=[Questions]
     actions=['publish_checked','duplicate_draft']
-    fieldsets=[('1. Test haqida', {'fields':['title','section','duration_seconds','version','published'], 'description':'Avval qoralamani saqlang, savollarni kiriting, keyin ro‘yxatdan «Tekshirish va nashr qilish» amalini tanlang. Nashr qilingan testni o‘zgartirish uchun yangi qoralamaga nusxalang.'}), ('2. Reading matni / topshiriq', {'fields':['passage'], 'description':'Matnni ingliz tilida, paragraflarni bo‘sh qator bilan ajratib kiriting. Vaqt soniyalarda: 60 daqiqa = 3600.'}), ('3. Listening audio', {'fields':['audio_file','audio_url'], 'classes':['collapse']})]
+    fieldsets=[('1. Test haqida', {'fields':['title','section','duration_seconds','version','published'], 'description':'Avval qoralamani saqlang, savollarni kiriting, keyin ro‘yxatdan «Tekshirish va nashr qilish» amalini tanlang. Nashr qilingan testni o‘zgartirish uchun yangi qoralamaga nusxalang.'}), ('2. Reading matni / topshiriq', {'fields':['passage'], 'description':'Matnni ingliz tilida, paragraflarni bo‘sh qator bilan ajratib kiriting. Vaqt soniyalarda: 60 daqiqa = 3600.'}), ('3. Listening audio', {'fields':['audio_file','audio_url','listening_transcript'], 'description':'Listening: audio faylni yuklang va AI uchun yashirin transkriptni kiriting. Passage faqat sintetik demo uchun: undagi matn ovoz ishlamasa foydalanuvchiga ko‘rinadi.'})]
 
     class Media:
         css={'all':('exams/admin.css',)}
     def get_readonly_fields(self,request,obj=None):
-        return ['title','section','version','duration_seconds','passage','audio_url','audio_file','published'] if obj and obj.published else ['published']
+        return ['title','section','version','duration_seconds','passage','audio_url','audio_file','listening_transcript','published'] if obj and obj.published else ['published']
     def has_delete_permission(self,request,obj=None):return not obj or not obj.published
     @admin.action(description='Tekshirish va nashr qilish')
     def publish_checked(self,request,queryset):

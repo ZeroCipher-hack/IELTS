@@ -100,13 +100,18 @@ def objective_mistakes(attempt):
         return mistakes
     except (KeyError,TypeError,AttributeError):raise AIError('AI_INVALID_REPORT') from None
 
+def objective_source(attempt):
+    source = (attempt.snapshot.get('listening_transcript') if attempt.snapshot.get('section') == 'Listening' else '') or attempt.snapshot.get('passage') or ''
+    if not isinstance(source, str):raise AIError('AI_INVALID_REPORT')
+    return source
+
 def validate_objective_report(data,attempt,expected_positions=None):
     wrong={row['position']:row for row in objective_mistakes(attempt)}
     expected=set(wrong) if expected_positions is None else set(expected_positions)
     if not expected or not expected.issubset(wrong):raise AIError('AI_INVALID_REPORT')
     items=data.get('items') if isinstance(data,dict) else None
     if not isinstance(items,list) or not items or len(items)>len(expected):raise AIError('AI_INVALID_REPORT')
-    source=attempt.snapshot.get('passage','')
+    source=objective_source(attempt)
     seen=set()
     for item in items:
         if not isinstance(item,dict):raise AIError('AI_INVALID_REPORT')
@@ -135,7 +140,7 @@ def assess_objective(attempt):
       'answer is wrong, and a concrete next step. Evidence must be an EXACT substring of the supplied source; leave it '
       'empty when the correct answer is NOT GIVEN or when no supporting text exists. Do not invent quotations. '
       'Explain why and next_step in '+feedback_language(attempt.snapshot)+'.')
-    source=attempt.snapshot.get('passage') or ''
+    source=objective_source(attempt)
     if not isinstance(source,str):raise AIError('AI_INVALID_REPORT')
     items=[];last_error=None
     for offset in range(0,len(wrong),8):

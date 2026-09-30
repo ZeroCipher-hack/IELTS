@@ -11,6 +11,7 @@ class Exam(models.Model):
     published=models.BooleanField(default=False)
     duration_seconds=models.PositiveIntegerField(default=600)
     passage=models.TextField(blank=True)
+    listening_transcript=models.TextField(blank=True)
     audio_url=models.URLField(blank=True)
     audio_file=models.FileField(upload_to='exam_audio/',blank=True,validators=[FileExtensionValidator(['mp3','wav','ogg','m4a','webm']),validate_audio_upload])
     # Only drafts can be edited; attempts additionally retain a complete snapshot.

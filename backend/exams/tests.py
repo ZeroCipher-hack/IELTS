@@ -13,6 +13,20 @@ class ExamFlowTests(TestCase):
         self.exam=Exam.objects.create(title='Test',section='Reading',published=True,duration_seconds=600,passage='A reading passage.')
         Question.objects.create(exam=self.exam,position=1,prompt='A statement',choices=['TRUE','FALSE'],accepted_answers=['TRUE'],evidence='Proof',explanation='Explanation')
         self.client.force_login(self.user)
+    @override_settings(EXAMS_OPEN_ACCESS=True)
+    def test_listening_transcript_is_snapshotted_but_never_sent_to_student(self):
+        exam=Exam.objects.create(title='Private transcript',section='Listening',published=True,
+            audio_url='https://example.com/test.mp3',listening_transcript='The private answer is eighteen.')
+        Question.objects.create(exam=exam,position=1,prompt='How much?',accepted_answers=['18'])
+        response=self.client.post('/api/attempts/',data=json.dumps({'exam_id':exam.pk}),content_type='application/json')
+        self.assertEqual(response.status_code,201)
+        attempt=Attempt.objects.get(pk=response.json()['id'])
+        self.assertEqual(attempt.snapshot['listening_transcript'],exam.listening_transcript)
+        self.assertNotIn('listening_transcript',response.json())
+        self.assertNotContains(response,exam.listening_transcript,status_code=201)
+        detail=self.client.get(f'/api/attempts/{attempt.pk}/')
+        self.assertNotContains(detail,exam.listening_transcript)
+
     def test_uploaded_listening_audio_starts_and_is_sent_to_runner(self):
         import tempfile
         from django.core.files.uploadedfile import SimpleUploadedFile

@@ -28,7 +28,7 @@ Kali/Linux tizimida bir marta `sudo apt install espeak-ng` bajaring. Keyin `bash
 
 Reading va Listening javoblari doim testdagi javob kaliti bilan hisoblanadi. Xato bo‘lsa, AI matn yoki transkriptga tayangan holda nima uchun xato ekanini va uni qanday tuzatishni qo‘shimcha tushuntiradi. AI bandni o‘zgartirmaydi. Kalit sozlanmagan, AI kvotasi tugagan yoki xato bo‘lgan holatda ham savolning to‘g‘ri javobi, dalili va muallif yozgan izohi ko‘rinadi.
 
-AI tahlil uchun `backend/.env` faylida `AI_ENABLED=1` va `GEMINI_API_KEY=...` bo‘lsin. `bash dev.sh` ni qayta ishga tushiring: `assess_pending --watch` worker'i fon rejimida tahlil qiladi, natija sahifasi tayyor bo‘lganda yangilanadi. Javoblar AI xizmatiga server tomonidan yuboriladi; kalit frontendga chiqmaydi. Listening audio fayli AI xizmatiga yuborilmaydi: tushuntirish uchun testning passage/transkript matni va javob kaliti ishlatiladi. Haqiqiy Listening testida transkriptni foydalanuvchiga ko‘rsatishni istamasangiz, AI izohi uchun hozircha uni passage maydoniga qo‘shmang; savolga yozilgan tahririy dalil va izohlar ishlatiladi.
+AI tahlil uchun `backend/.env` faylida `AI_ENABLED=1` va `GEMINI_API_KEY=...` bo‘lsin. `bash dev.sh` ni qayta ishga tushiring: `assess_pending --watch` worker'i fon rejimida tahlil qiladi, natija sahifasi tayyor bo‘lganda yangilanadi. Javoblar AI xizmatiga server tomonidan yuboriladi; kalit frontendga chiqmaydi. Listening audio fayli AI xizmatiga yuborilmaydi: tushuntirish uchun testning passage/transkript matni va javob kaliti ishlatiladi. Haqiqiy Listening testida transkriptni «Yashirin audio transkripti (AI uchun)» maydoniga kiriting. U foydalanuvchiga yuborilmaydi. Passage maydoni faqat sintetik demo uchun ishlatiladi; ovoz ishlamasa uning matni ko‘rinadi.
 
 Writing va Speaking ilgari mavjud AI baholash oqimidan foydalanadi. Writing bahosi AI yo‘q bo‘lsa kutadi; Speaking uchun mikrofon va Gemini Live ulanishi kerak.
 
@@ -53,7 +53,7 @@ Nashr qilingan test urinishlarga snapshot sifatida nusxalanadi va admin orqali t
 
 | Bo‘lim | Kerakli ma’lumotlar |
 |---|---|
-| Listening | Yuklangan audio fayl yoki ishlaydigan HTTPS audio manzili, savollar, variantlar va to‘g‘ri javoblar. Haqiqiy testda audio skriptini passage maydoniga kiritmang — foydalanuvchiga ko‘rinadi. |
+| Listening | Yuklangan audio fayl yoki ishlaydigan HTTPS audio manzili, savollar, variantlar va to‘g‘ri javoblar. Audio skriptini yashirin transkript maydoniga kiriting; passage demo uchun, foydalanuvchiga ko‘rinishi mumkin. |
 | Reading | Matn, savollar, variantlar va javob kalitlari. True / False / Not Given variantlarini aynan TRUE, FALSE, NOT GIVEN deb yozing. |
 | Writing | Prompt; admin panelda variantlar va javob kaliti maydonlarini bo‘sh qoldiring. Hozirgi demo Task 1 uchun raqamlarni matnli jadval ko‘rinishida beradi; rasmli diagrammani AI baholashga nashr qilmang. |
 | Speaking | Admin savollaridan foydalanmaydi. AI mashqi alohida yoqiladi; to‘liq IELTS Speaking baholashi deb ko‘rsatmang. |
@@ -111,3 +111,28 @@ Repo ichidagi materiallar original mashq savollari, haqiqiy IELTS imtihonidan ol
 6. Saqlang. Testlar ro‘yxatida qoralamani belgilang va «Tekshirish va nashr qilish» amalini bajaring. Keyingi tahrir uchun «Yangi versiyaga nusxalash»dan foydalaning.
 
 AI izohlari uchun backend va baholash worker’ida `AI_ENABLED=1` hamda `GEMINI_API_KEY` sozlangan bo‘lishi kerak. AI ishlamasa ham javob kaliti bo‘yicha natija va admin kiritgan dalil/izoh saqlanadi.
+
+## Listening: audio va savollarni admin paneldan yuklash
+
+1. `http://127.0.0.1:8001/admin/` → Exams → Add exam. Section: Listening. Nom kiriting, vaqtni soniyalarda yozing (masalan, 10 daqiqa = 600).
+2. «Listening audio» qismida Audio fayl → Choose file orqali MP3/WAV/OGG/M4A/WebM yuklang. Hajmi 20 MB dan oshmasin. Bevosita HTTPS audio havola ham mumkin; yuklangan fayl ustun turadi.
+3. Yashirin audio transkripti maydoniga yozuvning aniq matnini kiriting. AI shu matnga tayangan holda xatoni tushuntiradi. Passage’ni haqiqiy test uchun bo‘sh qoldiring.
+4. Savollar → yana bir savol qo‘shish. Quyidagi misolni kiriting:
+
+| Maydon | Misol |
+|---|---|
+| Savol raqami | 1 |
+| Savol | How much does the walk cost? |
+| Javob variantlari | Har qatorga: £16, £18, £20 |
+| To‘g‘ri javoblar | £18 |
+| Matndan aniq dalil | The walk costs eighteen pounds. |
+| Tushuntirish | Yozuvda eighteen aytilgan, eighty emas. Keyingi safar -teen va -ty tovushlariga e’tibor bering. |
+| Savol turi | Multiple choice |
+
+5. Qisqa javobli savolda variantlarni bo‘sh qoldiring. Qabul qilinadigan har bir javobni alohida qatorga yozing, masalan `18` va `eighteen`. Javob uzunligi yoki format qoidasini savolning o‘zida yozing; platforma yangi so‘z-limit qoidasi qo‘shmaydi.
+6. Saqlang. Exams ro‘yxatida testni belgilang → «Tekshirish va nashr qilish» → Go. Frontend → Testlar → Listening orqali oching, Play recording tugmasini bosing. Vaqt va progress audio boshlangandan keyin yangilanadi.
+7. Avval bitta javobni ataylab noto‘g‘ri topshirib tekshiring: natijada kalit, dalil va tahririy izoh chiqadi. AI yoqilgan va worker ishlayotgan bo‘lsa, qo‘shimcha nima uchun xato va keyingi qadam izohi keladi.
+
+Audio yo‘q bo‘lsa: faylni admin orqali yuklash eng sodda yo‘l. Demo uchun Kali’da `sudo apt install espeak-ng`, keyin `bash dev.sh` ishlating. Brauzerda inglizcha ovoz yo‘q bo‘lsa, sintetik fallback o‘rniga namuna matni ko‘rsatiladi. Bu holat haqiqiy Listening sinovi hisoblanmaydi.
+
+JSON import ham `listening_transcript` maydonini qabul qiladi. Import audio faylni o‘zi yuklamaydi: importdan keyin faylni admin orqali biriktiring (yoki JSON’da bevosita HTTPS `audio_url` kiriting). Nashr qilingan testlar uchun «Yangi versiyaga nusxalash» orqali qoralama yarating.

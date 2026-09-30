@@ -138,7 +138,7 @@ def attempts(request):
                 entitlement=Entitlement.objects.select_for_update().filter(user=request.user,exam=exam,consumed=False).first()
                 if not entitlement:return error('Bepul urinish ishlatilgan. To‘lov hali ulanmagan; administrator kirish huquqi bera oladi.',402)
                 entitlement.consumed=True;entitlement.save()
-        snapshot={'title':exam.title,'section':exam.section,'version':exam.version,'passage':exam.passage,'audio_url':exam.audio_file.url if exam.audio_file else exam.audio_url,'questions':qs,'feedback_language':profile.language if profile.language in ('uz','en','ru') else 'uz'}
+        snapshot={'title':exam.title,'section':exam.section,'version':exam.version,'passage':exam.passage,'audio_url':exam.audio_file.url if exam.audio_file else exam.audio_url,'questions':qs,'listening_transcript':exam.listening_transcript if exam.section=='Listening' else '', 'feedback_language':profile.language if profile.language in ('uz','en','ru') else 'uz'}
         a=Attempt.objects.create(user=request.user,exam=exam,snapshot=snapshot,deadline=timezone.now()+timedelta(seconds=exam.duration_seconds))
     return JsonResponse(payload(a),status=201)
 def clean_answers(d,snapshot):
