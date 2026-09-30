@@ -180,3 +180,7 @@ Bu bo‘limda audio yoki javob kaliti yuklanmaydi: imtihon oluvchi savollarni o�
 Bo‘limlar tartibi shu brauzerning localStorage’ida saqlanadi; boshqa qurilmaga ko‘chmaydi. Javoblar serverdagi urinishlarda saqlanadi. Brauzer ma’lumotlari tozalansa, umumiy oqim yo‘qoladi, individual natijalar tarixda qoladi. Speaking’ning yuborilmagan audio yozuvi refresh’dan keyin tiklanmaydi.
 
 Yakuniy hisobotda to‘rtta karta: Listening/Reading xom ballari, Writing/Speaking AI bahosi yoki «kutilmoqda», «AI o‘chirilgan/xato», «Speaking o‘tkazib yuborilgan» holati ko‘rinadi. AI ishlar tayyorlanguncha sahifa 5 soniyada qayta tekshiradi. Bitta so‘rov xato bo‘lsa boshqa natijalar saqlanadi va qayta urinish tugmasi chiqadi. Umumiy IELTS band hisoblanmaydi: bu testlar uchun tasdiqlangan Listening/Reading band jadvali mavjud emas.
+
+### AI xatosidan keyin qayta urinish
+
+Admin → Assessment jobs bo‘limida muvaffaqiyatsiz ishlarni tanlab, qayta navbatga qo‘yish amalini ishlating. Avval API kaliti yoki provayder limitini tekshiring. Reading/Listening ballari va javoblari o‘zgarmaydi; faqat izohlar qayta so‘raladi. Writing javoblari saqlanadi va qayta baholanadi. Speaking audiosi o‘chirilgan bo‘lsa, yangi mashq yozish kerak — eski ish navbatga qo‘yilmaydi. Natijadagi yangilash tugmasi holatni tekshiradi, yangi pullik AI so‘rovini yaratmaydi.

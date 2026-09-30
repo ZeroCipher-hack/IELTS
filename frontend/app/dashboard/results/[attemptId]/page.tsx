@@ -9,7 +9,8 @@ import LoadingSkeleton from '@/components/product/loading-skeleton';
 export default function ResultDetailPage() {
   const router = useRouter();
   const params = useParams<{ attemptId: string }>();
-  const { t, setError, load } = useProduct();
+  const { t, language, setError, load } = useProduct();
+  const [refreshing, setRefreshing] = useState(false);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
 
   useEffect(() => {
@@ -36,12 +37,19 @@ export default function ResultDetailPage() {
     return () => { alive = false; clearInterval(id); };
   }, [attempt, load]);
 
+  async function refresh() {
+    setRefreshing(true);
+    try { setAttempt(await api<Attempt>(`attempts/${params.attemptId}/`)); }
+    catch (error) { setError((error as Error).message); }
+    finally { setRefreshing(false); }
+  }
+
   if (!attempt) return <LoadingSkeleton label={t.loading} />;
 
   return (
     <>
       <button className="text-button no-print" onClick={() => router.back()}>← {t.back}</button>
-      <ResultReport attempt={attempt} t={t} />
+      <ResultReport attempt={attempt} t={t} language={language} refreshing={refreshing} onRefresh={()=>void refresh()} />
     </>
   );
 }

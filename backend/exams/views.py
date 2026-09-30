@@ -104,6 +104,7 @@ def payload(a,include_questions=True):
         job=AssessmentJob.objects.filter(attempt=a).first()
         if job:
             from .gemini import configured
+            data['tutoring_error']=job.error_code
             data['tutoring_status']='disabled' if job.state in ('pending','running') and not configured() else job.state
     if include_questions:
         data.update({'passage':snap['passage'],'audio_url':snap.get('audio_url',''),'questions':[{k:v for k,v in q.items() if k not in ['accepted_answers','evidence','explanation']} for q in snap['questions']]})
