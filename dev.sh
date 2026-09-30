@@ -28,6 +28,9 @@ fi
 echo "==> Ma'lumotlar bazasi (SQLite): migratsiyalar qo'llanmoqda..."
 python manage.py migrate
 
+echo "==> Sinov uchun original Listening/Reading/Writing testlari tekshirilmoqda..."
+python manage.py seed_demo
+
 echo "==> Backend http://127.0.0.1:${BACKEND_PORT} da ishga tushmoqda..."
 python manage.py runserver "127.0.0.1:${BACKEND_PORT}" &
 BACKEND_PID=$!

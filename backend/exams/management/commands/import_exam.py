@@ -12,7 +12,7 @@ class Command(BaseCommand):
             with open(options['file'],encoding='utf-8') as f:data=json.load(f)
             if not isinstance(data,dict) or not isinstance(data.get('questions'),list):raise ValueError('questions ro‘yxati kerak.')
             with transaction.atomic():
-                exam=Exam.objects.create(**{k:data[k] for k in ['title','section','duration_seconds','passage','audio_url'] if k in data})
+                exam=Exam.objects.create(**{k:data[k] for k in ['title','section','duration_seconds','passage','audio_url','listening_transcript'] if k in data})
                 exam.full_clean()
                 for i,row in enumerate(data['questions'],1):
                     q=Question(exam=exam,position=i,**{k:row[k] for k in ['prompt','choices','accepted_answers','skill_tag','evidence','explanation'] if k in row})

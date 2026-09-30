@@ -1,4 +1,6 @@
 """Provider-independent exam validation, submission and evidence-based feedback."""
+from datetime import timedelta
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 
@@ -10,9 +12,10 @@ def validate_exam(exam):
     if not 60 <= exam.duration_seconds <= 14400: errors.append('Davomiylik 60–14400 soniya bo‘lsin.')
     if not questions: errors.append('Kamida bitta topshiriq kiriting.')
     if exam.section=='Reading' and not exam.passage.strip(): errors.append('Reading matni kerak.')
-    if exam.section=='Listening' and not exam.audio_url.startswith('https://'): errors.append('Listening uchun HTTPS audio havolasi kerak.')
+    if exam.section=='Listening' and not (exam.audio_file or exam.audio_url.startswith('https://') or exam.passage.strip()): errors.append('Listening uchun audio fayl, HTTPS havola yoki ovozli demo matni kerak.')
     if exam.section=='Writing' and len(questions)>2: errors.append('Writing uchun ko‘pi bilan ikkita topshiriq kiriting.')
     for q in questions:
+        if exam.section=='Writing' and q.position not in (1,2): errors.append('Writing topshiriq raqami 1 yoki 2 bo‘lsin.')
         if not q.prompt.strip(): errors.append(f'{q.position}: savol matni kerak.')
         if not isinstance(q.choices,list) or any(not isinstance(c,str) or not c.strip() for c in q.choices):
             errors.append(f'{q.position}: variantlar matnlar ro‘yxati bo‘lsin.')
@@ -56,4 +59,12 @@ def finish_attempt(a):
     if a.snapshot['section']=='Writing':
         from .models import AssessmentJob
         AssessmentJob.objects.get_or_create(attempt=a)
+    elif a.snapshot['section'] in ('Reading','Listening') and any(not row['correct'] for row in a.result['rows']):
+        from .gemini import configured
+        if configured():
+            from .models import AssessmentJob
+            since=timezone.now()-timedelta(days=1)
+            used=AssessmentJob.objects.filter(attempt__user=a.user,attempt__submitted_at__gte=since,
+                attempt__snapshot__section__in=['Reading','Listening']).count()
+            if used<max(0,settings.AI_COACHING_DAILY_LIMIT):AssessmentJob.objects.get_or_create(attempt=a)
     return a

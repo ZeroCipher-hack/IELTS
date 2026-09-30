@@ -1,6 +1,6 @@
 > **Gemini update:** Writing assessment worker and staff-only voice pilot are implemented. Activation requires a server-side API key and a running worker. Live provider validation is pending. See [AI setup](docs/AI_SETUP.md).
 
-> **Current status (2026-09-12):** The main frontend now uses real Django accounts and saved results. The older sample design is available at `/design`. Reading/Listening grading and Writing collection work without AI credentials. This is not yet a complete paid IELTS product: Speaking, AI assessment, full-exam orchestration, payments and production validation remain. See [deployment and launch checklist](docs/DEPLOYMENT.md).
+> **Current status (2026-09-12):** The main frontend now uses real Django accounts and saved results. The older sample design is available at `/design`. Reading/Listening grading and Writing collection work without AI credentials. This is not yet a complete paid IELTS product: production-grade Speaking assessment, payment integration and production validation remain. A sequential local practice flow is available, but its short sample tests and optional Speaking voice pilot do not produce a validated official four-skill IELTS band. See [deployment and launch checklist](docs/DEPLOYMENT.md).
 
 # IELTSQA
 
@@ -53,5 +53,7 @@ pnpm build
 - frontend/: Next.js + TypeScript, no Sites account dependency.
 - backend/: Django API, admin, models, migrations, seed command and tests.
 - docs/: architecture, design and integration checklist.
+
+For the Uzbek guide to creating Reading, Listening and Writing test material, see [docs/ADDING_TESTS_UZ.md](docs/ADDING_TESTS_UZ.md). The local `dev.sh` launcher seeds original sample tests automatically.
 
 Only original demonstration content belongs in this public repository. Do not commit real user records, paid answer keys, credentials or database files.

@@ -39,3 +39,21 @@ class SpeakingTests(TestCase):
         self.upload();report={'band':6.5,'tasks':[],'kind':'ai_speaking'}
         with patch('exams.management.commands.assess_pending.assess_speaking',return_value=report):self.assertTrue(process_one())
         self.assertEqual(Attempt.objects.get().state,'graded');self.assertFalse(SpeakingRecording.objects.exists())
+
+    def test_candidate_transcript_is_separate_from_assessment_instructions(self):
+        import json
+        from .speaking_assessment import assess_speaking
+        self.upload()
+        attempt=Attempt.objects.get()
+        report={'sufficient_audio':True,'criteria':dict.fromkeys(CRITERIA,6),'feedback':'Feedback',
+            'improvement':'Plan','strengths':'Strength','examples':[{'quote':'my family','explanation':'Explain',
+            'better_answer':'I share an apartment with my family.'}]}
+        response={'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':json.dumps(report)}]}}]}
+        with patch('exams.speaking_assessment.post',return_value=response) as mocked:
+            assess_speaking(attempt)
+        payload=mocked.call_args.args[1]
+        instruction=payload['systemInstruction']['parts'][0]['text']
+        self.assertNotIn(attempt.answers['1'],instruction)
+        data=json.loads(payload['contents'][0]['parts'][0]['text'])
+        self.assertEqual(data['candidate_transcript'],attempt.answers['1'])
+        self.assertIn('inlineData',payload['contents'][0]['parts'][1])

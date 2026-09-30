@@ -76,7 +76,13 @@ def sign_in(request):
     login(request,user);return JsonResponse({'user':person(user)})
 @endpoint(['POST'])
 def sign_out(request):logout(request);return JsonResponse({'ok':True})
-def public_exam(exam):return {'id':exam.id,'title':exam.title,'section':exam.section,'version':exam.version,'duration_seconds':exam.duration_seconds,'question_count':exam.questions.count()}
+def public_exam(exam):
+    try:
+        validate_exam(exam)
+        ready = True
+    except ValidationError:
+        ready = False
+    return {'id':exam.id,'title':exam.title,'section':exam.section,'version':exam.version,'duration_seconds':exam.duration_seconds,'question_count':exam.questions.count(),'ready':ready}
 @endpoint(['GET'])
 def catalog(request):
     profile,_=Profile.objects.get_or_create(user=request.user)
@@ -94,6 +100,12 @@ def payload(a,include_questions=True):
         job=AssessmentJob.objects.filter(attempt=a).first()
         data['assessment_error']=job.error_code if job else ''
         data['assessment_status']=('disabled' if not configured() else job.state if job else 'pending')
+    if include_questions and snap['section'] in ('Reading','Listening') and a.state=='graded':
+        job=AssessmentJob.objects.filter(attempt=a).first()
+        if job:
+            from .gemini import configured
+            data['tutoring_error']=job.error_code
+            data['tutoring_status']='disabled' if job.state in ('pending','running') and not configured() else job.state
     if include_questions:
         data.update({'passage':snap['passage'],'audio_url':snap.get('audio_url',''),'questions':[{k:v for k,v in q.items() if k not in ['accepted_answers','evidence','explanation']} for q in snap['questions']]})
     return data
@@ -127,7 +139,7 @@ def attempts(request):
                 entitlement=Entitlement.objects.select_for_update().filter(user=request.user,exam=exam,consumed=False).first()
                 if not entitlement:return error('Bepul urinish ishlatilgan. To‘lov hali ulanmagan; administrator kirish huquqi bera oladi.',402)
                 entitlement.consumed=True;entitlement.save()
-        snapshot={'title':exam.title,'section':exam.section,'version':exam.version,'passage':exam.passage,'audio_url':exam.audio_url,'questions':qs,'feedback_language':profile.language}
+        snapshot={'title':exam.title,'section':exam.section,'version':exam.version,'passage':exam.passage,'audio_url':exam.audio_file.url if exam.audio_file else exam.audio_url,'questions':qs,'listening_transcript':exam.listening_transcript if exam.section=='Listening' else '', 'feedback_language':profile.language if profile.language in ('uz','en','ru') else 'uz'}
         a=Attempt.objects.create(user=request.user,exam=exam,snapshot=snapshot,deadline=timezone.now()+timedelta(seconds=exam.duration_seconds))
     return JsonResponse(payload(a),status=201)
 def clean_answers(d,snapshot):
@@ -194,22 +206,24 @@ def voice_status(request):
 
 @endpoint(['POST'])
 def voice_token(request):
-    from .voice import access,constraints
+    from .voice import access,constraints,published_script
     from .gemini import post,AIError
     state=access(request.user)
     if not state['allowed']:return error('VOICE_PRACTICE_DISABLED',403)
     if not state['configured']:return error('AI_NOT_CONFIGURED',503)
     d=body(request);part=d.get('part',1)
     if type(part) is not int or part not in (1,2,3):return error('VOICE_PART_INVALID')
+    try:script=published_script(d.get('set_id'),latest='set_id' not in d)
+    except ValueError:return error('VOICE_SET_INVALID')
     if throttle('voice:'+str(request.user.pk)):return error('AI_RATE_LIMIT',429)
-    now=timezone.now();locked=constraints(part)
+    now=timezone.now();locked=constraints(part,script)
     try:
         token=post('auth_tokens',{'uses':1,'expireTime':(now+timedelta(minutes=5)).isoformat(),
             'newSessionExpireTime':(now+timedelta(seconds=60)).isoformat(),'bidiGenerateContentSetup':locked})
         name=token.get('name')
         if not isinstance(name,str) or not name:raise AIError('AI_TOKEN_INVALID')
     except AIError as exc:return error(str(exc),503)
-    response=JsonResponse({'token':name,'model':locked['model'],'expires_in':300,'part':part})
+    response=JsonResponse({'token':name,'model':locked['model'],'expires_in':300,'part':part,'set_id':script['set_id']})
     response['Cache-Control']='no-store'
     return response
 
@@ -255,7 +269,7 @@ def speaking_submit(request):
         if not exam:exam=Exam.objects.create(section='Speaking',title='AI Speaking practice',duration_seconds=660)
         profile,_=Profile.objects.get_or_create(user=request.user)
         snap={'title':'Speaking · AI feedback','section':'Speaking','version':1,'passage':'','audio_url':'',
-            'feedback_language':profile.language,'questions':[{'position':1,'prompt':'Recorded speaking practice','choices':[],'skill_tag':'Speaking'}]}
+            'feedback_language':profile.language if profile.language in ('uz','en','ru') else 'uz','questions':[{'position':1,'prompt':'Recorded speaking practice','choices':[],'skill_tag':'Speaking'}]}
         a=Attempt.objects.create(id=identifier,user=request.user,exam=exam,snapshot=snap,answers={'1':transcript},state='awaiting_assessment',deadline=timezone.now(),submitted_at=timezone.now())
         SpeakingRecording.objects.create(attempt=a,segments=segments)
         AssessmentJob.objects.create(attempt=a)

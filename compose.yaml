@@ -27,6 +27,7 @@ services:
         condition: service_healthy
     volumes:
       - static_files:/app/staticfiles
+      - exam_media:/app/media
     ports:
       - "8001:8000"
   ai_worker:
@@ -61,11 +62,13 @@ services:
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - static_files:/srv/static:ro
+      - exam_media:/srv/media:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on: [frontend, backend]
 volumes:
   postgres_data:
   static_files:
+  exam_media:
   caddy_data:
   caddy_config:

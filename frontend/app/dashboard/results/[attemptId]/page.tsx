@@ -9,7 +9,8 @@ import LoadingSkeleton from '@/components/product/loading-skeleton';
 export default function ResultDetailPage() {
   const router = useRouter();
   const params = useParams<{ attemptId: string }>();
-  const { t, setError, load } = useProduct();
+  const { t, language, setError, load } = useProduct();
+  const [refreshing, setRefreshing] = useState(false);
   const [attempt, setAttempt] = useState<Attempt | null>(null);
 
   useEffect(() => {
@@ -22,26 +23,33 @@ export default function ResultDetailPage() {
 
   // Hali baholanmagan bo'lsa — polling.
   useEffect(() => {
-    if (!attempt || attempt.state !== 'awaiting_assessment' || attempt.assessment_status === 'failed' || attempt.assessment_status === 'disabled') return;
+    if (!attempt || !(attempt.state === 'awaiting_assessment' && attempt.assessment_status !== 'failed' && attempt.assessment_status !== 'disabled') && !(['pending','running'].includes(attempt.tutoring_status || '') && !attempt.result?.tutoring)) return;
     let alive = true;
     let pending = false;
     const id = setInterval(() => {
       if (pending) return;
       pending = true;
       api<Attempt>(`attempts/${attempt.id}/`)
-        .then((a) => { if (!alive) return; setAttempt(a); if (a.state === 'graded') void load(true).catch(() => {}); })
+        .then((a) => { if (!alive) return; setAttempt(a); if (attempt.state === 'awaiting_assessment' && a.state === 'graded') void load(true).catch(() => {}); })
         .catch(() => {})
         .finally(() => { pending = false; });
     }, 5000);
     return () => { alive = false; clearInterval(id); };
   }, [attempt, load]);
 
+  async function refresh() {
+    setRefreshing(true);
+    try { setAttempt(await api<Attempt>(`attempts/${params.attemptId}/`)); }
+    catch (error) { setError((error as Error).message); }
+    finally { setRefreshing(false); }
+  }
+
   if (!attempt) return <LoadingSkeleton label={t.loading} />;
 
   return (
     <>
       <button className="text-button no-print" onClick={() => router.back()}>← {t.back}</button>
-      <ResultReport attempt={attempt} t={t} />
+      <ResultReport attempt={attempt} t={t} language={language} refreshing={refreshing} onRefresh={()=>void refresh()} />
     </>
   );
 }

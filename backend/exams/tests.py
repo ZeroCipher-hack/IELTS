@@ -1,4 +1,5 @@
 import json
+from unittest.mock import patch
 from datetime import timedelta
 from django.test import TestCase,Client,override_settings
 from django.contrib.auth import get_user_model
@@ -12,6 +13,55 @@ class ExamFlowTests(TestCase):
         self.exam=Exam.objects.create(title='Test',section='Reading',published=True,duration_seconds=600,passage='A reading passage.')
         Question.objects.create(exam=self.exam,position=1,prompt='A statement',choices=['TRUE','FALSE'],accepted_answers=['TRUE'],evidence='Proof',explanation='Explanation')
         self.client.force_login(self.user)
+    @override_settings(EXAMS_OPEN_ACCESS=True)
+    def test_listening_transcript_is_snapshotted_but_never_sent_to_student(self):
+        exam=Exam.objects.create(title='Private transcript',section='Listening',published=True,
+            audio_url='https://example.com/test.mp3',listening_transcript='The private answer is eighteen.')
+        Question.objects.create(exam=exam,position=1,prompt='How much?',accepted_answers=['18'])
+        response=self.client.post('/api/attempts/',data=json.dumps({'exam_id':exam.pk}),content_type='application/json')
+        self.assertEqual(response.status_code,201)
+        attempt=Attempt.objects.get(pk=response.json()['id'])
+        self.assertEqual(attempt.snapshot['listening_transcript'],exam.listening_transcript)
+        self.assertNotIn('listening_transcript',response.json())
+        self.assertNotContains(response,exam.listening_transcript,status_code=201)
+        detail=self.client.get(f'/api/attempts/{attempt.pk}/')
+        self.assertNotContains(detail,exam.listening_transcript)
+
+    def test_uploaded_listening_audio_starts_and_is_sent_to_runner(self):
+        import tempfile
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        with tempfile.TemporaryDirectory() as root, override_settings(MEDIA_ROOT=root):
+            listening = Exam.objects.create(
+                title='Uploaded listening', section='Listening', published=True,
+                duration_seconds=600, audio_url='', passage='The speaker is at the library.',
+            )
+            listening.audio_file.save(
+                'practice.wav', SimpleUploadedFile('practice.wav', b'RIFF' + b'0' * 100, content_type='audio/wav'),
+            )
+            Question.objects.create(exam=listening, position=1, prompt='Where?', choices=['Library', 'Market'], accepted_answers=['Library'])
+            response=self.client.post('/api/attempts/', data=json.dumps({'exam_id':listening.pk}), content_type='application/json')
+            self.assertEqual(response.status_code,201)
+            self.assertTrue(response.json()['audio_url'].startswith('/media/exam_audio/practice'))
+            self.assertTrue(next(e for e in self.client.get('/api/catalog/').json()['exams'] if e['id']==listening.pk)['ready'])
+
+    def test_catalog_marks_invalid_listening_test_unavailable(self):
+        listening = Exam.objects.create(
+            title='Legacy listening', section='Listening', published=True,
+            duration_seconds=600, audio_url='http://localhost:8001/audio.mp3',
+            passage='',
+        )
+        Question.objects.create(
+            exam=listening, position=1, prompt='Where is the meeting?',
+            choices=['At the library', 'At the station'], accepted_answers=['At the library'],
+        )
+        def entry():
+            return next(exam for exam in self.client.get('/api/catalog/').json()['exams'] if exam['id'] == listening.pk)
+        self.assertFalse(entry()['ready'])
+        listening.audio_url = ''
+        listening.passage = 'Transcript for browser speech.'
+        listening.save(update_fields=['audio_url', 'passage'])
+        self.assertTrue(entry()['ready'])
+
     def test_catalog_access_is_personal_and_resumable(self):
         from .models import Entitlement
         Entitlement.objects.create(user=self.other,exam=self.exam,reference='other-access')
@@ -139,3 +189,104 @@ class ProfileDetailsTests(TestCase):
             self.assertEqual(response.status_code,400)
         response=self.client.post('/api/register/',data=json.dumps({'email':'new@example.com','name':'Tolqin','password':'Strong-Test-123!'}),content_type='application/json')
         self.assertEqual(response.status_code,201)
+
+class DemoContentTests(TestCase):
+    def test_seed_generates_demo_wav_and_updates_active_snapshot(self):
+        import tempfile
+        import wave
+        from pathlib import Path
+        from io import StringIO
+        from django.core.management import call_command
+        with tempfile.TemporaryDirectory() as root, override_settings(MEDIA_ROOT=root):
+            with patch('exams.management.commands.seed_demo.shutil.which', return_value=None):
+                call_command('seed_demo', stdout=StringIO())
+            exam = Exam.objects.get(title='City History Walk — Listening practice')
+            learner = get_user_model().objects.create_user('demo-audio@example.com', password='Strong-Test-123!')
+            attempt = Attempt.objects.create(
+                user=learner, exam=exam, deadline=timezone.now()+timedelta(minutes=5),
+                snapshot={'title':exam.title,'section':'Listening','passage':exam.passage,'audio_url':'browser-tts://passage'},
+                answers={'1':'East entrance'},
+            )
+            def write_wav(args, **kwargs):
+                with wave.open(str(args[6]), 'wb') as audio:
+                    audio.setnchannels(1)
+                    audio.setsampwidth(2)
+                    audio.setframerate(16000)
+                    audio.writeframes(b'\x00\x00' * 320)
+            with patch('exams.management.commands.seed_demo.shutil.which', return_value='/usr/bin/espeak-ng'), patch(
+                'exams.management.commands.seed_demo.subprocess.run', side_effect=write_wav
+            ) as generator:
+                call_command('seed_demo', stdout=StringIO())
+            generator.assert_called_once()
+            exam.refresh_from_db()
+            attempt.refresh_from_db()
+            self.assertTrue(exam.audio_file.name.endswith('.wav'))
+            self.assertEqual(attempt.snapshot['audio_url'], exam.audio_file.url)
+            self.assertEqual(attempt.answers, {'1':'East entrance'})
+            self.assertTrue(Path(exam.audio_file.path).is_file())
+            with wave.open(exam.audio_file.path, 'rb') as audio:
+                self.assertEqual(audio.getnframes(), 320)
+                self.assertEqual(audio.getframerate(), 16000)
+            Path(exam.audio_file.path).unlink()
+            with patch('exams.management.commands.seed_demo.shutil.which', return_value='/usr/bin/espeak-ng'), patch(
+                'exams.management.commands.seed_demo.subprocess.run', side_effect=write_wav
+            ) as generator:
+                call_command('seed_demo', stdout=StringIO())
+            generator.assert_called_once()
+            self.assertTrue(Path(exam.audio_file.path).is_file())
+
+    @patch('exams.management.commands.seed_demo.attach_demo_audio', return_value=False)
+    def test_seed_demo_adds_original_practice_exams_idempotently(self, _mock_audio):
+        from io import StringIO
+        from django.core.management import call_command
+
+        call_command('seed_demo', stdout=StringIO())
+        expected={
+            'Urban gardens — original demo': 5,
+            'City History Walk — Listening practice': 8,
+            'Community Libraries — Reading practice': 8,
+            'Coastal Wetlands — Reading evidence practice': 8,
+            'Public Transport Trends — Writing Task 1 + Task 2 practice': 2,
+        }
+        for title,count in expected.items():
+            exam=Exam.objects.get(title=title)
+            self.assertTrue(exam.published)
+            self.assertEqual(exam.questions.count(),count)
+        self.assertEqual(Exam.objects.get(title='City History Walk — Listening practice').audio_url,'')
+
+        listening = Exam.objects.get(title='City History Walk — Listening practice')
+        listening.audio_url = ''
+        listening.save(update_fields=['audio_url'])
+        learner = get_user_model().objects.create_user('seed-listening@example.com', password='Strong-Test-123!')
+        attempt = Attempt.objects.create(
+            user=learner,
+            exam=listening,
+            snapshot={'title': listening.title, 'section': 'Listening', 'passage': listening.passage, 'audio_url': ''},
+            answers={'1': 'East entrance'},
+            deadline=timezone.now() + timedelta(minutes=5),
+        )
+
+        call_command('seed_demo', stdout=StringIO())
+        self.assertEqual(Exam.objects.count(),len(expected))
+        listening.refresh_from_db()
+        attempt.refresh_from_db()
+        self.assertEqual(listening.audio_url, '')
+        self.assertEqual(attempt.snapshot['audio_url'], '')
+        self.assertEqual(attempt.answers, {'1': 'East entrance'})
+        self.assertEqual(listening.questions.count(), 8)
+
+        listening.audio_url = 'http://localhost:8001/old-audio.mp3'
+        listening.save(update_fields=['audio_url'])
+        attempt.snapshot = {**attempt.snapshot, 'audio_url': listening.audio_url}
+        attempt.save(update_fields=['snapshot'])
+        call_command('seed_demo', stdout=StringIO())
+        listening.refresh_from_db()
+        attempt.refresh_from_db()
+        self.assertEqual(listening.audio_url, '')
+        self.assertEqual(attempt.snapshot['audio_url'], '')
+
+        listening.audio_url = 'https://example.com/custom-audio.mp3'
+        listening.save(update_fields=['audio_url'])
+        call_command('seed_demo', stdout=StringIO())
+        listening.refresh_from_db()
+        self.assertEqual(listening.audio_url, 'https://example.com/custom-audio.mp3')

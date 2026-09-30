@@ -4,6 +4,12 @@
         root * /srv/static
         file_server
     }
+    handle_path /media/exam_audio/* {
+        root * /srv/media/exam_audio
+        header Content-Disposition "inline"
+        header X-Content-Type-Options "nosniff"
+        file_server
+    }
     @django path /api/* /admin /admin/*
     handle @django {
         reverse_proxy backend:8000
