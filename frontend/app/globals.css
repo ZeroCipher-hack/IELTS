@@ -761,3 +761,12 @@ html[data-theme="dark"] .examiner-character { background:radial-gradient(ellipse
 .section-reading .live-options label:has(input:checked) { border-color: var(--exam-color); background: color-mix(in srgb, var(--exam-color) 10%, var(--card)); }
 .section-reading .question-nav { gap: 8px; padding-bottom: 16px; }
 .section-reading .question-nav button:focus-visible { outline: 3px solid var(--exam-color); outline-offset: 3px; }
+
+/* Listening controls and question workspace. */
+.section-listening .audio-player-card { padding: 24px; border-radius: 20px; border: 1px solid var(--border); gap: 16px; }
+.listening-playback-status { grid-column: 1/-1; display: flex; justify-content: space-between; font-size: 13px; font-variant-numeric: tabular-nums; color: var(--muted-foreground); }
+.listening-audio-progress { grid-column: 1/-1; width: 100%; height: 8px; accent-color: var(--exam-color); }
+.listening-volume { grid-column: 1/-1; display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.listening-volume input { flex: 1; min-width: 0; accent-color: var(--exam-color); }
+.section-listening .live-question { padding: 22px; border: 1px solid var(--border); border-radius: 16px; margin-bottom: 20px; }
+.section-listening .live-options label:has(input:checked) { border-color: var(--exam-color); background: color-mix(in srgb, var(--exam-color) 10%, var(--card)); }
