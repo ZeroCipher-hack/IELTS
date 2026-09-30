@@ -56,7 +56,7 @@ Nashr qilingan test urinishlarga snapshot sifatida nusxalanadi va admin orqali t
 | Listening | Yuklangan audio fayl yoki ishlaydigan HTTPS audio manzili, savollar, variantlar va to‘g‘ri javoblar. Audio skriptini yashirin transkript maydoniga kiriting; passage demo uchun, foydalanuvchiga ko‘rinishi mumkin. |
 | Reading | Matn, savollar, variantlar va javob kalitlari. True / False / Not Given variantlarini aynan TRUE, FALSE, NOT GIVEN deb yozing. |
 | Writing | Prompt; admin panelda variantlar va javob kaliti maydonlarini bo‘sh qoldiring. Hozirgi demo Task 1 uchun raqamlarni matnli jadval ko‘rinishida beradi; rasmli diagrammani AI baholashga nashr qilmang. |
-| Speaking | Admin savollaridan foydalanmaydi. AI mashqi alohida yoqiladi; to‘liq IELTS Speaking baholashi deb ko‘rsatmang. |
+| Speaking | Admin’dagi Speaking savol to‘plamlari ishlatiladi. AI mashqi alohida yoqiladi; to‘liq IELTS Speaking baholashi deb ko‘rsatmang. |
 
 Admin panelga audio yuklasangiz, fayl `backend/media/exam_audio/` papkasida, fayl nomi esa SQLite bazasida saqlanadi. `backend/db.sqlite3` bazani zaxiralashning o‘zi yetmaydi: `backend/media/` papkasini ham saqlang. Lokal `dev.sh` media fayllarini uzatadi; production serverda `/media/` uchun doimiy storage va serving alohida sozlanadi. Tashqi HTTPS havola ishlatsangiz, brauzerda login talab qilmasdan ochilishi kerak. Faqat foydalanish huquqingiz bor audio qo‘shing.
 
@@ -152,7 +152,7 @@ Task 1 — kamida 150 so‘z, taxminan 20 daqiqa; Task 2 — kamida 250 so‘z, 
 
 ## Speaking mashqini sinash
 
-Speaking savollari hozir admin’dagi Exam/Question orqali yuklanmaydi. Backend’dagi `exams/voice.py` skripti ishlatiladi: Part 1 tanish mavzular, Part 2 bitta cue card, Part 3 cue card mavzusiga bog‘liq umumiy savollar. Bu original mashq materiali, rasmiy imtihon savollari emas.
+Speaking savollari admin’dagi «Speaking savol to‘plamlari» orqali kiritiladi. To‘plam nashr qilinmagan bo‘lsa, backend’dagi `exams/voice.py` standart skripti ishlatiladi: Part 1 tanish mavzular, Part 2 bitta cue card, Part 3 cue card mavzusiga bog‘liq umumiy savollar. Bu original mashq materiali, rasmiy imtihon savollari emas.
 
 1. Backend’da AI_ENABLED=1, VOICE_PRACTICE_ENABLED=1 va GEMINI_API_KEY sozlangan bo‘lsin. Kalitni frontendga kiritmang. `bash dev.sh` worker’ni ham ishga tushiradi.
 2. Speaking sahifasida mikrofon va ovozni tekshiring. Rozilikni belgilang, suhbatni boshlang. Localhost yoki HTTPS va mikrofon ruxsati kerak.
@@ -160,3 +160,15 @@ Speaking savollari hozir admin’dagi Exam/Question orqali yuklanmaydi. Backend�
 4. Part 1’dan keyin 1 daqiqa tayyorlanish: cue card va shaxsiy qisqa qaydlar. Qaydlar AI’ga yuborilmaydi; faqat shu ochiq sahifada saqlanadi. Part 2 davomida o‘qish mumkin, tahrirlash yopiladi. Part 2 taklifidan keyin qo‘shimcha AI savollari ijro etilmaydi.
 5. Mashq tugagach «Baholash va natijani saqlash» bosing. Audio va nomzod transkripti yuboriladi; baho worker orqali keladi. Audio yetarli bo‘lmasa, tizim band o‘ylab topmaydi.
 6. Refresh yoki chiqishda yuborilmagan yozuv va qaydlar yo‘qoladi. Ulanish uzilgan mashq natijasi to‘liq imtihon sifatida ko‘rsatilmaydi. Jonli mikrofon/Gemini sinovi alohida tekshirilishi kerak.
+
+## Speaking savollarini admin’dan kiritish
+
+1. `/admin/` → **Speaking savol to‘plamlari** → Add. To‘plam nomi va versiyani yozing.
+2. Part 1 maydoniga har qatorga bitta inglizcha tanish mavzu savoli kiriting. Masalan: “What do you study?” va “What do you enjoy about your studies?”
+3. Part 2 mavzusiga bitta cue card yozing: “Describe a library you have visited.” Tayanch punktlar maydoniga 3–5 ta punktni alohida qatorlarda yozing: “Where it is”, “When you visited”, “Why you remember it”.
+4. Part 3 maydoniga shu mavzuga bog‘liq umumiy savollar yozing: “Why are libraries important for communities?” Savollarni kerakli tartibda kiriting; AI tartibni almashtirmaydi.
+5. Saqlang. To‘plamlar ro‘yxatida qoralamani belgilang → «Tekshirish va nashr qilish». Part 1: 1–15 savol, Part 3: 1–12 savol, har savol/punkt 500 belgigacha.
+6. Speaking sahifasini yangilang: to‘plam nomi va versiyasi ko‘rinadi. Oxirgi nashr qilingan to‘plam yangi suhbat uchun olinadi. Boshqa to‘plam nashr qilinsa ham, boshlangan suhbat eski to‘plamida davom etadi.
+7. Nashr qilingan to‘plam o‘zgartirilmaydi va admin’dan o‘chirilmaydi. «Yangi versiyaga nusxalash» bilan qoralama yarating, tahrirlab nashr qiling. Yangi to‘plamlar eski natijalarni qayta baholamaydi.
+
+Bu bo‘limda audio yoki javob kaliti yuklanmaydi: imtihon oluvchi savollarni o‘qiydi, topshiruvchi mikrofon orqali javob beradi. Savollar original mashq uchun; ularni kiritish AI ulanishi va worker o‘rnini bosmaydi.
