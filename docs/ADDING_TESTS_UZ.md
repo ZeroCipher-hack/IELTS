@@ -149,3 +149,14 @@ JSON import ham `listening_transcript` maydonini qabul qiladi. Import audio fayl
 8. Natijada har Task bahosi, to‘rtta mezon, javobdan dalil va yaxshilash tavsiyasi ko‘rinadi. Yangi AI hisobotlarida ko‘pi bilan uchta aniq xato uchun asl jumla, izoh va tuzatilgan inglizcha jumla bo‘ladi; mavjud eski hisobotlar o‘z holicha ochiladi.
 
 Task 1 — kamida 150 so‘z, taxminan 20 daqiqa; Task 2 — kamida 250 so‘z, taxminan 40 daqiqa va ikki baravar vazn. Manba: https://ielts.org/take-a-test/test-types/ielts-academic-test/ielts-academic-format-writing . Baho AI mashq taxmini; rasmiy IELTS natijasi emas.
+
+## Speaking mashqini sinash
+
+Speaking savollari hozir admin’dagi Exam/Question orqali yuklanmaydi. Backend’dagi `exams/voice.py` skripti ishlatiladi: Part 1 tanish mavzular, Part 2 bitta cue card, Part 3 cue card mavzusiga bog‘liq umumiy savollar. Bu original mashq materiali, rasmiy imtihon savollari emas.
+
+1. Backend’da AI_ENABLED=1, VOICE_PRACTICE_ENABLED=1 va GEMINI_API_KEY sozlangan bo‘lsin. Kalitni frontendga kiritmang. `bash dev.sh` worker’ni ham ishga tushiradi.
+2. Speaking sahifasida mikrofon va ovozni tekshiring. Rozilikni belgilang, suhbatni boshlang. Localhost yoki HTTPS va mikrofon ruxsati kerak.
+3. Savollar qat’iy tartibda beriladi. Mos kelmagan AI gaplari belgilangan savol bilan almashtiriladi; matni ko‘rinadi. Part 1/3 vaqti birinchi savol tugagach, Part 2’dagi 2 daqiqa esa taklif tugagach boshlanadi.
+4. Part 1’dan keyin 1 daqiqa tayyorlanish: cue card va shaxsiy qisqa qaydlar. Qaydlar AI’ga yuborilmaydi; faqat shu ochiq sahifada saqlanadi. Part 2 davomida o‘qish mumkin, tahrirlash yopiladi. Part 2 taklifidan keyin qo‘shimcha AI savollari ijro etilmaydi.
+5. Mashq tugagach «Baholash va natijani saqlash» bosing. Audio va nomzod transkripti yuboriladi; baho worker orqali keladi. Audio yetarli bo‘lmasa, tizim band o‘ylab topmaydi.
+6. Refresh yoki chiqishda yuborilmagan yozuv va qaydlar yo‘qoladi. Ulanish uzilgan mashq natijasi to‘liq imtihon sifatida ko‘rsatilmaydi. Jonli mikrofon/Gemini sinovi alohida tekshirilishi kerak.
