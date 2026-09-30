@@ -172,3 +172,11 @@ Speaking savollari admin’dagi «Speaking savol to‘plamlari» orqali kiritila
 7. Nashr qilingan to‘plam o‘zgartirilmaydi va admin’dan o‘chirilmaydi. «Yangi versiyaga nusxalash» bilan qoralama yarating, tahrirlab nashr qiling. Yangi to‘plamlar eski natijalarni qayta baholamaydi.
 
 Bu bo‘limda audio yoki javob kaliti yuklanmaydi: imtihon oluvchi savollarni o‘qiydi, topshiruvchi mikrofon orqali javob beradi. Savollar original mashq uchun; ularni kiritish AI ulanishi va worker o‘rnini bosmaydi.
+
+## To‘liq imtihonni davom ettirish va yakuniy hisobot
+
+`/dashboard/full-exam` sahifasida Listening, Reading va Writing testlarini tanlang. Joriy oqim bo‘lsa «Davom ettirish» shu bosqichni ochadi; test tanlovlari oqim davomida qulflanadi. «Yangi imtihon tanlash» oqim tanlovini yangilaydi, bazadagi oldingi javoblarni o‘chirmaydi.
+
+Bo‘limlar tartibi shu brauzerning localStorage’ida saqlanadi; boshqa qurilmaga ko‘chmaydi. Javoblar serverdagi urinishlarda saqlanadi. Brauzer ma’lumotlari tozalansa, umumiy oqim yo‘qoladi, individual natijalar tarixda qoladi. Speaking’ning yuborilmagan audio yozuvi refresh’dan keyin tiklanmaydi.
+
+Yakuniy hisobotda to‘rtta karta: Listening/Reading xom ballari, Writing/Speaking AI bahosi yoki «kutilmoqda», «AI o‘chirilgan/xato», «Speaking o‘tkazib yuborilgan» holati ko‘rinadi. AI ishlar tayyorlanguncha sahifa 5 soniyada qayta tekshiradi. Bitta so‘rov xato bo‘lsa boshqa natijalar saqlanadi va qayta urinish tugmasi chiqadi. Umumiy IELTS band hisoblanmaydi: bu testlar uchun tasdiqlangan Listening/Reading band jadvali mavjud emas.

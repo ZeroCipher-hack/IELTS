@@ -18,6 +18,8 @@ export default function FullExamPage() {
   const [chosen, setChosen] = useState<Record<string, number>>({});
   const [flow, setFlow] = useState<FullExamFlow | null>(null);
   const [flowReady, setFlowReady] = useState(false);
+  const [resultError, setResultError] = useState('');
+  const [refreshKey, setRefreshKey] = useState(0);
   const isResults = params.get('results') === '1';
   useEffect(() => {
     const saved = parseFullExamFlow(localStorage.getItem(fullExamKey));
@@ -28,11 +30,18 @@ export default function FullExamPage() {
   useEffect(() => {
     if (!isResults || !flow) return;
     let alive = true;
-    Promise.all((flow.attempts || []).map(id => api<Attempt>(`attempts/${id}/`)))
-      .then(items => { if (alive) setResults(items); })
-      .catch(() => { if (alive) setResults([]); });
-    return () => { alive = false; };
-  }, [isResults, flow]);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    async function refresh() {
+      const outcomes = await Promise.allSettled(flow!.attempts.map(id => api<Attempt>(`attempts/${id}/`)));
+      if (!alive) return;
+      const items = outcomes.flatMap(outcome => outcome.status === 'fulfilled' ? [outcome.value] : []);
+      setResults(items);
+      setResultError(outcomes.some(outcome => outcome.status === 'rejected') ? t.unavailable : '');
+      if (items.some(item => (item.state === 'awaiting_assessment' && !['failed','disabled'].includes(item.assessment_status || '')) || ['pending','running'].includes(item.tutoring_status || ''))) timer = setTimeout(() => { void refresh(); }, 5000);
+    }
+    void refresh();
+    return () => { alive = false; if (timer) clearTimeout(timer); };
+  }, [isResults, flow, refreshKey, t.unavailable]);
 
   const selected = order.map(section => { const options=exams.filter(e => e.section === section && e.ready !== false).sort((a,b) => a.id-b.id); return options.find(e => e.id === chosen[section]) || options[0]; }).filter((exam): exam is NonNullable<typeof exam> => Boolean(exam));
   const canResume = Boolean(flow && (flow.step < 3 || flow.speaking === 'pending'));
@@ -51,19 +60,25 @@ export default function FullExamPage() {
   if (!flowReady || (catalogLoading && !isResults)) return <LoadingSkeleton label={t.loading} />;
 
   if (isResults) {
-    if (!flow || !results) return <LoadingSkeleton label={t.loading} />;
-    const graded = results.filter(a => a.result?.band != null);
-    const avg = graded.length ? (graded.reduce((sum, a) => sum + Number(a.result?.band), 0) / graded.length).toFixed(1) : null;
+    if (!flow) return <section className="panel"><h1>{say('Saqlangan imtihon topilmadi','No saved exam found','Сохранённый экзамен не найден')}</h1><Link className="primary" href="/dashboard/full-exam">{t.start}</Link></section>;
+    if (!results) return <LoadingSkeleton label={t.loading} />;
+    const completed = results.filter(item => item.state === 'graded').length;
     return <div className="full-exam-page full-exam-results">
       <div className="full-exam-results-hero">
         <span className="full-exam-kicker"><Trophy size={16}/>{say('SINOV HISOBOTI','PRACTICE REPORT','ОТЧЁТ О ТРЕНИРОВКЕ')}</span>
-        <h1>{say('Imtihon yakunlandi','Exam complete','Экзамен завершён')}</h1>
+        <h1>{canResume?say('Imtihon davom etmoqda','Exam in progress','Экзамен продолжается'):say('Imtihon yakunlandi','Exam complete','Экзамен завершён')}</h1>
         <p>{say('Bo‘limlar bo‘yicha javoblaringiz saqlandi. Quyida mavjud natijalar va baholash holati berilgan.','Your answers were saved by section. Review the available scores and assessment status below.','Ответы по разделам сохранены. Ниже доступны результаты и статус оценки.')}</p>
-        <div className="full-exam-report-score">{avg?<><strong>{avg}</strong><span>{say('baholangan ishlar o‘rtachasi','average of assessed work','средний балл оценённых работ')}</span></>:<><strong>—</strong><span>{say('AI band natijasi hozircha yo‘q','No AI band available yet','Оценка AI пока недоступна')}</span></>}</div>
+        <div className="full-exam-report-score"><strong>{completed} / 4</strong><span>{say('natijasi tayyor bo‘limlar','sections with results ready','разделов с готовым результатом')}</span></div>
       </div>
-      <div className="full-exam-report-note"><ShieldCheck size={18}/><p>{say('Bu sinov hisoboti. Ko‘rsatilgan band faqat AI baholagan ishlar o‘rtachasi; rasmiy IELTS natijasi emas. Listening va Reading xom ballari bandga aylantirilmagan.','Practice report only. Any displayed band is the average of AI-assessed work, not an official IELTS result. Listening and Reading raw scores are not converted to bands.','Это тренировочный отчёт. Показанный балл — среднее по работам, оценённым ИИ, а не официальный IELTS. Сырые баллы Listening и Reading не переведены в band.')}</p></div>
-      <div className="full-exam-report-grid">{results.map(a=><article className={'full-exam-result-card skill-'+a.section.toLowerCase()} key={a.id}><span className="eyebrow">{a.section}</span><h2>{a.title}</h2><div className="full-exam-result-value">{a.state==='graded'&&a.result?(a.result.band==null?`${a.result.correct} / ${a.result.total}`:`Band ${a.result.band}`):a.state==='awaiting_assessment'?say('Baholash kutilmoqda','Assessment pending','Ожидает оценки'):say('Natija mavjud emas','No score available','Оценка недоступна')}</div><p>{a.state==='graded'&&a.result?(a.result.band==null?say('To‘g‘ri javoblar','Correct answers','Правильные ответы'):say('AI baholashi','AI assessment','Оценка ИИ')):say('Javoblar saqlandi','Answers saved','Ответы сохранены')}</p><Link className="text-button" href={`/dashboard/results/${a.id}`}>{say('Batafsil tahlil','View result','Подробный результат')}<ArrowRight size={16}/></Link></article>)}</div>
-      <div className="full-exam-bottom-actions"><Link className="secondary" href="/dashboard/tests">{say('Testlar ro‘yxatiga qaytish','Back to tests','К тестам')}<ArrowRight size={16}/></Link><button className="text-button" onClick={()=>{localStorage.removeItem('ieltsqa-full-exam');router.push('/dashboard')}}>{say('Bosh sahifa','Dashboard','На главную')}</button></div>
+      <div className="full-exam-report-note"><ShieldCheck size={18}/><p>{say('Bu sinov hisoboti. Umumiy IELTS band hisoblanmaydi. Writing va Speaking baholari AI taxmini. Listening va Reading xom ballari bandga aylantirilmagan.','Practice report only. No overall IELTS band is calculated. Writing and Speaking bands are AI estimates. Listening and Reading raw scores are not converted to bands.','Это тренировочный отчёт. Общий IELTS band не рассчитывается. Баллы Writing и Speaking — оценки ИИ. Сырые баллы Listening и Reading не переведены в band.')}</p></div>
+      {resultError&&<div className="product-alert" role="alert">{resultError}<button className="secondary" onClick={()=>setRefreshKey(key=>key+1)}>{t.retry}</button></div>}
+      <div className="full-exam-report-grid">{[...order,'Speaking'].map(section=>{
+        const a=results.find(item=>item.section===section);
+        const failed=a?.assessment_status==='failed',disabled=a?.assessment_status==='disabled';
+        const label=a?.state==='graded'&&a.result?(a.result.band==null?`${a.result.correct} / ${a.result.total}`:`AI band ${a.result.band}`):failed?t.assessmentFailed:disabled?t.pendingNote:a?.state==='awaiting_assessment'?t.pending:section==='Speaking'&&flow.speaking==='skipped'?say('O‘tkazib yuborilgan','Skipped','Пропущено'):say('Natija olinmadi','No result loaded','Результат не получен');
+        return <article className={'full-exam-result-card skill-'+section.toLowerCase()} key={section}><span className="eyebrow">{section}</span><h2>{a?.title||section}</h2><div className="full-exam-result-value">{label}</div>{a&&<><p>{a.result?.band==null&&a.state==='graded'?say('To‘g‘ri javoblar','Correct answers','Правильные ответы'):say('Javoblar saqlandi','Answers saved','Ответы сохранены')}</p><Link className="text-button" href={`/dashboard/results/${a.id}`}>{say('Batafsil tahlil','View result','Подробный результат')}<ArrowRight size={16}/></Link></>}</article>;
+      })}</div>
+      <div className="full-exam-bottom-actions">{canResume&&<Link className="primary" href={nextFullExamPath(flow)}>{say('Davom ettirish','Resume exam','Продолжить')}</Link>}<Link className="secondary" href="/dashboard/tests">{say('Testlar ro‘yxatiga qaytish','Back to tests','К тестам')}<ArrowRight size={16}/></Link><button className="text-button" onClick={()=>{localStorage.removeItem(fullExamKey);router.push('/dashboard')}}>{say('Bosh sahifa','Dashboard','На главную')}</button></div>
     </div>;
   }
 
