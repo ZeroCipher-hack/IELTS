@@ -55,7 +55,7 @@ Nashr qilingan test urinishlarga snapshot sifatida nusxalanadi va admin orqali t
 |---|---|
 | Listening | Yuklangan audio fayl yoki ishlaydigan HTTPS audio manzili, savollar, variantlar va to‘g‘ri javoblar. Haqiqiy testda audio skriptini passage maydoniga kiritmang — foydalanuvchiga ko‘rinadi. |
 | Reading | Matn, savollar, variantlar va javob kalitlari. True / False / Not Given variantlarini aynan TRUE, FALSE, NOT GIVEN deb yozing. |
-| Writing | Prompt, bo‘sh variantlar [] va bo‘sh kalit []. Hozirgi demo Task 1 uchun raqamlarni matnli jadval ko‘rinishida beradi; rasmli diagrammani AI baholashga nashr qilmang. |
+| Writing | Prompt; admin panelda variantlar va javob kaliti maydonlarini bo‘sh qoldiring. Hozirgi demo Task 1 uchun raqamlarni matnli jadval ko‘rinishida beradi; rasmli diagrammani AI baholashga nashr qilmang. |
 | Speaking | Admin savollaridan foydalanmaydi. AI mashqi alohida yoqiladi; to‘liq IELTS Speaking baholashi deb ko‘rsatmang. |
 
 Admin panelga audio yuklasangiz, fayl `backend/media/exam_audio/` papkasida, fayl nomi esa SQLite bazasida saqlanadi. `backend/db.sqlite3` bazani zaxiralashning o‘zi yetmaydi: `backend/media/` papkasini ham saqlang. Lokal `dev.sh` media fayllarini uzatadi; production serverda `/media/` uchun doimiy storage va serving alohida sozlanadi. Tashqi HTTPS havola ishlatsangiz, brauzerda login talab qilmasdan ochilishi kerak. Faqat foydalanish huquqingiz bor audio qo‘shing.
@@ -100,3 +100,14 @@ example.org manzilini haqiqiy, ishlaydigan HTTPS audio URL bilan almashtiring. T
 ## Muhim
 
 Repo ichidagi materiallar original mashq savollari, haqiqiy IELTS imtihonidan olinmagan. Listening sintetik ovozi bilan beriladigan demo oqimni tekshiradi, lekin haqiqiy audio sifati yoki IELTS imtihon darajasini tasdiqlamaydi. Reading va Listening natijasi xom to‘g‘ri javob soni. Writing bahosi AI sozlamalari va worker ishlashiga bog‘liq. Rasmiy IELTS bandi va’da qilinmaydi.
+
+## Reading testini admin paneldan kiritish
+
+1. `/admin/` ga staff hisob bilan kiring. Exams → Add orqali qoralama yarating.
+2. Section: Reading. Duration seconds: 3600 — 60 daqiqa. Passage maydoniga matnni kiriting; paragraflar orasida bo‘sh qator qoldiring.
+3. Savol qo‘shing: raqam, inglizcha savol va savol turini yozing. Variantlar uchun har qatorga bitta variant kiriting; qisqa javobda variantlarni bo‘sh qoldiring.
+4. To‘g‘ri javoblar maydonida har qatorga bitta qabul qilinadigan javob yozing. JSON yozish kerak emas.
+5. Dalil maydoniga matndan aynan jumlani ko‘chiring. NOT GIVEN uchun dalilni bo‘sh qoldiring. Tushuntirishda javobni topish usuli va xatoni takrorlamaslik yo‘lini yozing. Bu izoh faqat xato javobda ko‘rsatiladi.
+6. Saqlang. Testlar ro‘yxatida qoralamani belgilang va «Tekshirish va nashr qilish» amalini bajaring. Keyingi tahrir uchun «Yangi versiyaga nusxalash»dan foydalaning.
+
+AI izohlari uchun backend va baholash worker’ida `AI_ENABLED=1` hamda `GEMINI_API_KEY` sozlangan bo‘lishi kerak. AI ishlamasa ham javob kaliti bo‘yicha natija va admin kiritgan dalil/izoh saqlanadi.

@@ -15,8 +15,31 @@ class ExamForm(forms.ModelForm):
             raise forms.ValidationError('Audio fayl 20 MB dan oshmasin.')
         return audio
 
+class AnswerLinesField(forms.Field):
+    widget = forms.Textarea(attrs={'rows': 4})
+
+    def prepare_value(self, value):
+        return '\n'.join(value) if isinstance(value, list) else value
+
+    def to_python(self, value):
+        return [line.strip() for line in (value or '').splitlines() if line.strip()]
+
+
+class QuestionForm(forms.ModelForm):
+    choices = AnswerLinesField(required=False, label='Javob variantlari', help_text='Har qatorga bitta variant. Qisqa javob uchun bo‘sh qoldiring.')
+    accepted_answers = AnswerLinesField(required=False, label='To‘g‘ri javoblar', help_text='Har qatorga bitta qabul qilinadigan javob. Variantli savolda variant bilan aynan bir xil yozing.')
+
+    class Meta:
+        model = Question
+        fields = '__all__'
+        labels = {'position': 'Savol raqami', 'prompt': 'Savol (ingliz tilida)', 'evidence': 'Matndan aniq dalil', 'explanation': 'Xatoni tushuntirish va to‘g‘rilash', 'skill_tag': 'Savol turi'}
+        help_texts = {'evidence': 'Reading matnidan aynan ko‘chirilgan jumla. NOT GIVEN uchun bo‘sh qoldiring.', 'explanation': 'To‘g‘ri javobga qanday kelish va shu xatoni qayta qilmaslikni tushuntiring.', 'skill_tag': 'Masalan: true_false_not_given, matching_headings, short_answer.'}
+
 class Questions(admin.StackedInline):
+    form=QuestionForm
     model=Question
+    verbose_name="Savol"
+    verbose_name_plural="Savollar — har biriga javob va dalil kiriting"
     extra=0
     fields=['position','prompt','choices','accepted_answers','skill_tag','evidence','explanation']
     def has_change_permission(self,request,obj=None):return not obj or not obj.published
@@ -31,6 +54,10 @@ class ExamAdmin(admin.ModelAdmin):
     search_fields=['title']
     inlines=[Questions]
     actions=['publish_checked','duplicate_draft']
+    fieldsets=[('1. Test haqida', {'fields':['title','section','duration_seconds','version','published'], 'description':'Avval qoralamani saqlang, savollarni kiriting, keyin ro‘yxatdan «Tekshirish va nashr qilish» amalini tanlang. Nashr qilingan testni o‘zgartirish uchun yangi qoralamaga nusxalang.'}), ('2. Reading matni / topshiriq', {'fields':['passage'], 'description':'Matnni ingliz tilida, paragraflarni bo‘sh qator bilan ajratib kiriting. Vaqt soniyalarda: 60 daqiqa = 3600.'}), ('3. Listening audio', {'fields':['audio_file','audio_url'], 'classes':['collapse']})]
+
+    class Media:
+        css={'all':('exams/admin.css',)}
     def get_readonly_fields(self,request,obj=None):
         return ['title','section','version','duration_seconds','passage','audio_url','audio_file','published'] if obj and obj.published else ['published']
     def has_delete_permission(self,request,obj=None):return not obj or not obj.published
