@@ -25,6 +25,38 @@ class AIIntegrationTests(TestCase):
     def test_rejects_duplicate_tasks(self):
         self.report['tasks']*=2
         with self.assertRaises(AIError):validate_report(self.report,self.attempt)
+    def test_writing_corrections_are_grounded_and_legacy_reports_still_work(self):
+        self.report['tasks'][0]['examples']=[{'quote':'Reliable buses','explanation':'Use a more precise verb.',
+            'better_answer':'Reliable buses provide students with dependable transport.'}]
+        report=validate_report(self.report,self.attempt)
+        self.assertEqual(report['tasks'][0]['examples'][0]['quote'],'Reliable buses')
+        self.report['tasks'][0]['examples'][0]['quote']='An invented student sentence'
+        with self.assertRaises(AIError):validate_report(self.report,self.attempt)
+        del self.report['tasks'][0]['examples']
+        self.assertEqual(validate_report(self.report,self.attempt)['band'],6)
+
+    def test_writing_corrections_do_not_change_task_weighting(self):
+        self.attempt.snapshot['questions']=[{'position':1,'prompt':'Summarise.'},{'position':2,'prompt':'Discuss.'}]
+        self.attempt.answers={'1':'A first response.','2':'A second response.'}
+        tasks=[]
+        for position,score in [(1,4),(2,7)]:
+            tasks.append({'position':position,'criteria':dict.fromkeys(CRITERIA,score),
+                'feedback':'Feedback','improvement':'Improve','evidence':self.attempt.answers[str(position)],
+                'examples':[]})
+        report=validate_report({'tasks':tasks},self.attempt)
+        self.assertEqual(report['band'],6)
+        self.assertEqual([task['band'] for task in report['tasks']],[4,7])
+
+    def test_writing_context_is_json_data_not_system_instruction(self):
+        self.attempt.snapshot['passage']='Transport table: bus 24% in 2010.'
+        response={'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':json.dumps(self.report)}]}}]}
+        with patch('exams.gemini.post',return_value=response) as mocked:
+            assess_writing(self.attempt)
+        data=mocked.call_args.args[1]
+        supplied=json.loads(data['contents'][0]['parts'][0]['text'])
+        self.assertEqual(supplied['context'],self.attempt.snapshot['passage'])
+        self.assertNotIn(self.attempt.snapshot['passage'],data['systemInstruction']['parts'][0]['text'])
+
     def test_transport_uses_validated_json(self):
         response={'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':json.dumps(self.report)}]}}]}
         with patch('exams.gemini.post',return_value=response):self.assertEqual(assess_writing(self.attempt)['band'],6)
