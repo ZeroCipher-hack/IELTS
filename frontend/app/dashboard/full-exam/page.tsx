@@ -5,21 +5,25 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowRight, Clock3, Headphones, BookOpen, PenLine, Mic, Check, CircleHelp, Sparkles, Trophy, ShieldCheck } from 'lucide-react';
 import { useProduct } from '@/components/product/product-context';
 import { api, type Attempt } from '@/components/product/api';
+import {fullExamKey, nextFullExamPath, parseFullExamFlow, type FullExamFlow} from '@/components/product/full-exam-flow';
 import LoadingSkeleton from '@/components/product/loading-skeleton';
 
 const order = ['Listening', 'Reading', 'Writing'] as const;
 const icons = { Listening: Headphones, Reading: BookOpen, Writing: PenLine, Speaking: Mic } as const;
-type Flow = { ids: number[]; step: number; attempts: string[]; startedAt: string };
 export default function FullExamPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const { exams, openAccess, free, history, say, t, catalogLoading } = useProduct();
+  const { exams, openAccess, say, t, catalogLoading } = useProduct();
   const [results, setResults] = useState<Attempt[] | null>(null);
   const [chosen, setChosen] = useState<Record<string, number>>({});
-  const [flow, setFlow] = useState<Flow | null>(null);
+  const [flow, setFlow] = useState<FullExamFlow | null>(null);
+  const [flowReady, setFlowReady] = useState(false);
   const isResults = params.get('results') === '1';
   useEffect(() => {
-    try { const saved = localStorage.getItem('ieltsqa-full-exam'); if (saved) setFlow(JSON.parse(saved) as Flow); } catch {}
+    const saved = parseFullExamFlow(localStorage.getItem(fullExamKey));
+    setFlow(saved);
+    if (saved) setChosen(Object.fromEntries(order.map((section,index) => [section,saved.ids[index]])));
+    setFlowReady(true);
   }, []);
   useEffect(() => {
     if (!isResults || !flow) return;
@@ -31,19 +35,20 @@ export default function FullExamPage() {
   }, [isResults, flow]);
 
   const selected = order.map(section => { const options=exams.filter(e => e.section === section && e.ready !== false).sort((a,b) => a.id-b.id); return options.find(e => e.id === chosen[section]) || options[0]; }).filter((exam): exam is NonNullable<typeof exam> => Boolean(exam));
-  const alreadyRunning = history.find(a => a.state === 'in_progress' && selected.some(e => e.title === a.title && e.section === a.section));
+  const canResume = Boolean(flow && (flow.step < 3 || flow.speaking === 'pending'));
   const totalMinutes = selected.reduce((sum, exam) => sum + Math.round(exam.duration_seconds / 60), 0);
   const hasAccess = openAccess || selected.every(e => e.has_access);
   function start() {
+    if (canResume && flow) { router.push(nextFullExamPath(flow)); return; }
     if (selected.length !== order.length) return;
     if (!hasAccess) { router.push('/dashboard/payments'); return; }
     if (selected.some(e => e.section === 'Writing') && !window.confirm(t.writingNotice)) return;
-    const value: Flow = { ids: selected.map(e => e.id), step: 0, attempts: [], startedAt: new Date().toISOString() };
-    localStorage.setItem('ieltsqa-full-exam', JSON.stringify(value));
+    const value: FullExamFlow = { ids: selected.map(e => e.id), step: 0, attempts: [], speaking: 'pending', startedAt: new Date().toISOString() };
+    localStorage.setItem(fullExamKey, JSON.stringify(value));
     router.push(`/dashboard/tests/${value.ids[0]}?full=1`);
   }
 
-  if (catalogLoading && !isResults) return <LoadingSkeleton label={t.loading} />;
+  if (!flowReady || (catalogLoading && !isResults)) return <LoadingSkeleton label={t.loading} />;
 
   if (isResults) {
     if (!flow || !results) return <LoadingSkeleton label={t.loading} />;
@@ -73,10 +78,11 @@ export default function FullExamPage() {
           <span><CircleHelp size={16}/>{selected.reduce((sum,e)=>sum+e.question_count,0)} {t.questions}</span>
           <span><ShieldCheck size={16}/>{say('Natijalar saqlanadi','Progress is saved','Результаты сохраняются')}</span>
         </div>
-        {alreadyRunning&&<div className="full-exam-resume-note"><Check size={17}/>{say('Davom etayotgan urinish topildi. Boshlashni bossangiz, oxirgi bo‘limingiz ochiladi.','An unfinished attempt was found. Starting will resume that section.','Найдена незавершённая попытка. При старте откроется текущий раздел.')}</div>}
+        {canResume&&<div className="full-exam-resume-note"><Check size={17}/>{say('Davom etayotgan urinish topildi. Boshlashni bossangiz, oxirgi bo‘limingiz ochiladi.','An unfinished attempt was found. Starting will resume that section.','Найдена незавершённая попытка. При старте откроется текущий раздел.')}</div>}
         {selected.length!==order.length&&<div className="product-alert">{say('Boshlash uchun Listening, Reading va Writing bo‘limlarida tayyor test bo‘lishi kerak.','Ready Listening, Reading and Writing tests are required to begin.','Для старта нужны готовые тесты Listening, Reading и Writing.')}</div>}
         {!hasAccess&&selected.length===order.length&&<div className="full-exam-resume-note">{say('Bu imtihonga kirish huquqi kerak.','Access is required for this exam.','Для экзамена требуется доступ.')}</div>}
-        <button className="primary full-exam-start" disabled={selected.length!==order.length} onClick={start}><PlayIcon/>{alreadyRunning?say('Imtihonni davom ettirish','Resume exam','Продолжить экзамен'):!hasAccess?say('Kirish huquqini olish','Get access','Получить доступ'):say('Imtihonni boshlash','Start full exam','Начать экзамен')}<ArrowRight size={18}/></button>
+        <button className="primary full-exam-start" disabled={!canResume&&selected.length!==order.length} onClick={start}><PlayIcon/>{canResume?say('Imtihonni davom ettirish','Resume exam','Продолжить экзамен'):!hasAccess?say('Kirish huquqini olish','Get access','Получить доступ'):say('Imtihonni boshlash','Start full exam','Начать экзамен')}<ArrowRight size={18}/></button>
+        {canResume&&<button className="text-button" onClick={()=>{if(!window.confirm(say('Joriy oqim o‘rniga yangi imtihon boshlaysizmi? Saqlangan javoblar tarixda qoladi.','Start a new flow? Saved attempts remain in history.','Начать новый экзамен? Сохранённые ответы останутся в истории.')))return;localStorage.removeItem(fullExamKey);setFlow(null);setChosen({});}}>{say('Yangi imtihon tanlash','Choose a new exam','Выбрать новый экзамен')}</button>}
       </div>
       <aside className="full-exam-hero-aside">
         <span className="full-exam-aside-label">{say('IMTIHON OQIMI','EXAM FLOW','ПОРЯДОК ЭКЗАМЕНА')}</span>
@@ -91,7 +97,7 @@ export default function FullExamPage() {
       <div className="full-exam-steps-grid">
         {order.map((section,index)=>{const exam=selected.find(e=>e.section===section);const Icon=icons[section];return <article className={'full-exam-step skill-'+section.toLowerCase()} key={section}>
           <div className="full-exam-step-top"><span className="full-exam-step-number">0{index+1}</span><span className="skill-icon"><Icon size={21}/></span></div>
-          <h3>{section}</h3>{exam?<label className="full-exam-test-select">{say('Testni tanlang','Choose a test','Выберите тест')}<select value={exam.id} onChange={event=>setChosen(current=>({...current,[section]:Number(event.target.value)}))}>{exams.filter(item=>item.section===section&&item.ready!==false).map(item=><option key={item.id} value={item.id}>{item.title}</option>)}</select></label>:<p>{say('Tayyor test topilmadi','No ready test found','Готовый тест не найден')}</p>}
+          <h3>{section}</h3>{exam?<label className="full-exam-test-select">{say('Testni tanlang','Choose a test','Выберите тест')}<select disabled={canResume} value={exam.id} onChange={event=>setChosen(current=>({...current,[section]:Number(event.target.value)}))}>{exams.filter(item=>item.section===section&&item.ready!==false).map(item=><option key={item.id} value={item.id}>{item.title}</option>)}</select></label>:<p>{say('Tayyor test topilmadi','No ready test found','Готовый тест не найден')}</p>}
           <div className="full-exam-step-meta">{exam?<><span>{exam.question_count} {t.questions}</span><span>{Math.round(exam.duration_seconds/60)} {t.minutes}</span></>:<span>{say('Mavjud emas','Unavailable','Недоступно')}</span>}</div>
         </article>})}
         <article className="full-exam-step skill-speaking">
