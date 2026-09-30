@@ -60,6 +60,15 @@ class AIIntegrationTests(TestCase):
     def test_transport_uses_validated_json(self):
         response={'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':json.dumps(self.report)}]}}]}
         with patch('exams.gemini.post',return_value=response):self.assertEqual(assess_writing(self.attempt)['band'],6)
+    def test_missing_speaking_recording_is_terminal_without_provider_call(self):
+        self.attempt.snapshot={'section':'Speaking'};self.attempt.save()
+        job=AssessmentJob.objects.create(attempt=self.attempt)
+        with patch('exams.speaking_assessment.post') as provider:
+            self.assertTrue(process_one());provider.assert_not_called()
+        job.refresh_from_db();self.attempt.refresh_from_db()
+        self.assertEqual(job.state,'failed');self.assertEqual(job.error_code,'AI_RECORDING_UNAVAILABLE')
+        self.assertEqual(self.attempt.state,'awaiting_assessment');self.assertIsNone(self.attempt.result)
+
     def test_worker_idempotency(self):
         AssessmentJob.objects.create(attempt=self.attempt)
         with patch('exams.management.commands.assess_pending.assess_writing',return_value=validate_report(self.report,self.attempt)) as mocked:

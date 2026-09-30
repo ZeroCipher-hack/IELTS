@@ -30,7 +30,7 @@ def process_one():
     with transaction.atomic():
         job=AssessmentJob.objects.get(pk=pk)
         if job.lease!=lease or job.state!='running':return True
-        next_state=('done' if report is not None else 'failed' if job.tries>=3 or error=='AI_INSUFFICIENT_AUDIO' else 'pending')
+        next_state=('done' if report is not None else 'failed' if job.tries>=3 or error in ('AI_INSUFFICIENT_AUDIO','AI_RECORDING_UNAVAILABLE') else 'pending')
         next_error='' if report is not None else error
         next_available=job.available_at if report is not None else timezone.now()+timedelta(seconds=60*job.tries)
         if not AssessmentJob.objects.filter(pk=pk,lease=lease,state='running').update(
