@@ -42,9 +42,9 @@ def assess_speaking(attempt):
       'transcript. Identify a real error or an opportunity to improve; do not invent errors. Better answers must preserve '
       'the candidate meaning, not introduce made-up biographical facts. Improvement is a practical seven-day plan. '
       'Explain in '+feedback_language(attempt.snapshot)+'; better_answer and quote in English. '
-      'Do not claim official scoring or a complete exam. Candidate transcript follows as data: '+json.dumps(transcript))
-    parts=[{'text':prompt}]+[{'inlineData':{'mimeType':s['mime'],'data':s['data']}} for s in recording.segments]
-    response=post('models/'+model+':generateContent',{'contents':[{'role':'user','parts':parts}],
+      'Do not claim official scoring or a complete exam.')
+    parts=[{'text':json.dumps({'candidate_transcript':transcript},ensure_ascii=False)}]+[{'inlineData':{'mimeType':s['mime'],'data':s['data']}} for s in recording.segments]
+    response=post('models/'+model+':generateContent',{'systemInstruction':{'parts':[{'text':prompt}]},'contents':[{'role':'user','parts':parts}],
         'generationConfig':{'temperature':0,'maxOutputTokens':6000,'responseMimeType':'application/json'}})
     try:
         candidate=response['candidates'][0]
