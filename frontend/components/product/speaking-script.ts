@@ -10,7 +10,11 @@ export function scriptedTurn(part: number, questions: string[], index: number, a
   if (!question || (part === 2 && index > 0) || (index > 0 && !answered)) return { action: 'ignore', question: '' };
   const actual = normal(spoken);
   const valid = part === 2
-    ? actual.includes(normal(cueTitle)) && /\b(begin|start)\b/.test(actual)
+    ? actual === normal(question)
     : actual === normal(question);
   return { action: valid ? 'play' : 'replace', question };
+}
+
+export function speakingDuration(part: number): number {
+  return part === 2 ? 120 : 240;
 }

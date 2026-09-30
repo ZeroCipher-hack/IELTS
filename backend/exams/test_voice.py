@@ -21,6 +21,7 @@ class SpeakingScriptTests(SimpleTestCase):
         self.assertIn(CUE['title'], prompt)
         self.assertIn('Do not interrupt pauses', prompt)
         self.assertIn('wait quietly for the timer', prompt)
+        self.assertIn('Say exactly: Please begin your talk. '+CUE['title'], prompt)
         self.assertNotIn(PART1_QUESTIONS[0], prompt)
 
     def test_part_three_stays_on_the_cue_card_theme_in_order(self):

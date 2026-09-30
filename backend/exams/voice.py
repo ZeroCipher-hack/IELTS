@@ -38,7 +38,7 @@ def constraints(part):
            'Ask these familiar-topic questions in their numbered order, one at a time, waiting for a complete answer before moving to the next: '
            + question_script(PART1_QUESTIONS),
         2: 'Conduct Part 2 (individual long turn). The candidate has already had one minute to prepare this cue card: '
-           + CUE['title'] + ' ' + '; '.join(CUE['points']) + '. Invite the candidate to begin talking. '
+           + CUE['title'] + ' ' + '; '.join(CUE['points']) + '. Say exactly: Please begin your talk. ' + CUE['title'] + ' '
            'Let them speak for up to two minutes. Do not interrupt pauses, switch topics, ask another question or start a conversation. '
            'If they finish early, wait quietly for the timer.',
         3: 'Conduct Part 3 (abstract discussion) about public places and communities, related to the Part 2 cue card: '
