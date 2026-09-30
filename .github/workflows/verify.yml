@@ -58,5 +58,7 @@ jobs:
         working-directory: frontend
       - run: node --experimental-strip-types --test components/product/speaking-script.test.ts
         working-directory: frontend
+      - run: node --experimental-strip-types --test components/product/full-exam-flow.test.ts
+        working-directory: frontend
       - run: pnpm build
         working-directory: frontend

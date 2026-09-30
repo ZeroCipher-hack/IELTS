@@ -1,8 +1,9 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useProduct } from '@/components/product/product-context';
 import { api, type Attempt } from '@/components/product/api';
+import {completeFullExamSection, fullExamKey, nextFullExamPath, parseFullExamFlow} from '@/components/product/full-exam-flow';
 import ExamRunner from '@/components/product/exam-runner';
 import LoadingSkeleton from '@/components/product/loading-skeleton';
 
@@ -22,6 +23,11 @@ export default function ExamPage() {
     if (catalogLoading) return;
     let alive = true;
     const examId = params.examId;
+    if (searchParams.get('full') === '1') {
+      const flow = parseFullExamFlow(localStorage.getItem(fullExamKey));
+      if (!flow) { router.replace('/dashboard/full-exam'); return; }
+      if (flow.ids[flow.step] !== Number(examId)) { router.replace(nextFullExamPath(flow)); return; }
+    }
     let request = startRequest.current?.examId === examId ? startRequest.current.promise : null;
 
     if (!request) {
@@ -69,6 +75,20 @@ export default function ExamPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.examId, catalogLoading, retryKey]);
 
+  const showCompleted = useCallback((a: Attempt) => {
+          if (searchParams.get('full') !== '1') { router.push(`/dashboard/results/${a.id}`); return; }
+          try {
+            const saved = parseFullExamFlow(localStorage.getItem(fullExamKey));
+            if (!saved) throw new Error('Missing full exam flow.');
+            const flow = completeFullExamSection(saved, Number(params.examId), a.id);
+            localStorage.setItem(fullExamKey, JSON.stringify(flow));
+            router.push(nextFullExamPath(flow));
+          } catch { router.push(`/dashboard/results/${a.id}`); }
+  }, [params.examId, router, searchParams]);
+  useEffect(() => {
+    if (status === 'ready' && attempt && attempt.state !== 'in_progress') showCompleted(attempt);
+  }, [status, attempt, showCompleted]);
+
   // Baholash kutilayotganda polling.
   useEffect(() => {
     if (!attempt || attempt.state !== 'awaiting_assessment' || attempt.assessment_status === 'failed' || attempt.assessment_status === 'disabled') return;
@@ -102,22 +122,11 @@ export default function ExamPage() {
       <ExamRunner
         attempt={attempt}
         t={t}
-        onClose={() => { void load().catch(() => {}); router.push('/dashboard/tests'); }}
-        onComplete={(a) => {
-          if (searchParams.get('full') !== '1') { router.push(`/dashboard/results/${a.id}`); return; }
-          try {
-            const flow = JSON.parse(localStorage.getItem('ieltsqa-full-exam') || '{}') as { ids?: number[]; step?: number; attempts?: string[] };
-            flow.attempts = [...(flow.attempts || []), a.id];
-            flow.step = (flow.step || 0) + 1;
-            localStorage.setItem('ieltsqa-full-exam', JSON.stringify(flow));
-            if (flow.ids && flow.step < flow.ids.length) router.push(`/dashboard/tests/${flow.ids[flow.step]}?full=1`);
-            else router.push('/dashboard/speaking?full=1');
-          } catch { router.push(`/dashboard/results/${a.id}`); }
-        }}
+        onClose={() => { void load().catch(() => {}); router.push(searchParams.get('full') === '1' ? '/dashboard/full-exam' : '/dashboard/tests'); }}
+        onComplete={showCompleted}
       />
     );
   }
   // Allaqachon topshirilgan/baholangan bo'lsa — natija sahifasiga yo'naltiramiz.
-  router.replace(`/dashboard/results/${attempt.id}`);
   return <LoadingSkeleton label={t.loading} />;
 }

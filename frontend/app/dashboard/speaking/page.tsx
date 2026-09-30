@@ -1,6 +1,7 @@
 'use client';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useProduct } from '@/components/product/product-context';
+import {finishFullExamSpeaking, fullExamKey, parseFullExamFlow} from '@/components/product/full-exam-flow';
 import VoicePilot from '@/components/product/voice-pilot';
 
 export default function SpeakingPage() {
@@ -11,9 +12,9 @@ export default function SpeakingPage() {
   function finishSpeaking(attemptId?: string) {
     if (fullExam) {
       try {
-        const flow = JSON.parse(localStorage.getItem('ieltsqa-full-exam') || '{}') as { attempts?: string[] };
-        if (attemptId) flow.attempts = [...(flow.attempts || []), attemptId];
-        localStorage.setItem('ieltsqa-full-exam', JSON.stringify(flow));
+        const saved = parseFullExamFlow(localStorage.getItem(fullExamKey));
+        if (!saved) throw new Error('Missing full exam flow.');
+        localStorage.setItem(fullExamKey, JSON.stringify(finishFullExamSpeaking(saved, attemptId)));
       } catch {}
       router.push('/dashboard/full-exam?results=1');
     } else if (attemptId) router.push(`/dashboard/results/${attemptId}`);
@@ -26,7 +27,7 @@ export default function SpeakingPage() {
         onBack={() => fullExam ? finishSpeaking() : router.push('/dashboard/tests')}
         onSubmitted={(attempt) => finishSpeaking(attempt.id)}
       />
-      {fullExam && <button className="secondary" onClick={() => finishSpeaking()}>
+      {fullExam && <button className="secondary" onClick={() => { if (window.confirm(language === 'uz' ? 'Speakingni o‘tkazib yuborasizmi? Yuborilmagan yozuv saqlanmaydi.' : language === 'ru' ? 'Пропустить Speaking? Неотправленная запись не сохранится.' : 'Skip Speaking? Unsubmitted recording will not be saved.')) finishSpeaking(); }}>
         {language === 'uz' ? 'Speakingni o‘tkazib yuborish' : language === 'ru' ? 'Пропустить Speaking' : 'Skip Speaking'}
       </button>}
     </>
