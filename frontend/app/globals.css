@@ -770,3 +770,12 @@ html[data-theme="dark"] .examiner-character { background:radial-gradient(ellipse
 .listening-volume input { flex: 1; min-width: 0; accent-color: var(--exam-color); }
 .section-listening .live-question { padding: 22px; border: 1px solid var(--border); border-radius: 16px; margin-bottom: 20px; }
 .section-listening .live-options label:has(input:checked) { border-color: var(--exam-color); background: color-mix(in srgb, var(--exam-color) 10%, var(--card)); }
+
+/* Writing task guidance, source material and corrections. */
+.writing-brief { display: grid; gap: 10px; padding: 20px; margin-top: 20px; border: 1px solid var(--border); border-radius: 16px; }
+.writing-brief p { margin: 0; color: var(--muted-foreground); font-size: 13px; }
+.writing-source-material { margin-top: 24px; padding: 20px; border-radius: 16px; background: color-mix(in srgb, var(--exam-color) 6%, var(--card)); }
+.writing-word-progress { width: 100%; height: 6px; margin-bottom: 12px; accent-color: var(--exam-color); }
+.writing-correction { margin-top: 24px; padding: 20px; border: 1px solid var(--border); border-radius: 16px; }
+.writing-better-answer { padding: 16px; border-left: 3px solid #10b981; white-space: pre-wrap; }
+.section-writing .essay { line-height: 1.85; font-size: 16px; border-radius: 14px; }
