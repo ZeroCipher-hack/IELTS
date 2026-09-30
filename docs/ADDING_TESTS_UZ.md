@@ -136,3 +136,16 @@ AI izohlari uchun backend va baholash worker’ida `AI_ENABLED=1` hamda `GEMINI_
 Audio yo‘q bo‘lsa: faylni admin orqali yuklash eng sodda yo‘l. Demo uchun Kali’da `sudo apt install espeak-ng`, keyin `bash dev.sh` ishlating. Brauzerda inglizcha ovoz yo‘q bo‘lsa, sintetik fallback o‘rniga namuna matni ko‘rsatiladi. Bu holat haqiqiy Listening sinovi hisoblanmaydi.
 
 JSON import ham `listening_transcript` maydonini qabul qiladi. Import audio faylni o‘zi yuklamaydi: importdan keyin faylni admin orqali biriktiring (yoki JSON’da bevosita HTTPS `audio_url` kiriting). Nashr qilingan testlar uchun «Yangi versiyaga nusxalash» orqali qoralama yarating.
+
+## Writing: Task 1 va Task 2 kiritish
+
+1. Admin → Exams → Add exam. Section: Writing, duration_seconds: 3600. Nom yozib, «Save and continue editing» bosing: Writing uchun soddalashtirilgan forma ochiladi.
+2. Writing materiallari maydoniga Task 1 jadvali yoki qo‘shimcha ma’lumotni matn shaklida kiriting. U topshiruvchiga ko‘rsatiladi va AI’ga JSON ma’lumot sifatida yuboriladi. Rasmli diagramma yuklash hozircha mavjud emas.
+3. Savol qo‘shing: raqam **1**, prompt — Task 1 topshirig‘i, jadval va barcha kerakli raqamlar. Masalan: “Summarise the transport figures below. Write at least 150 words.”
+4. Yana savol qo‘shing: raqam **2**, prompt — Task 2 mavzusi va yo‘riqnomasi. Masalan: “Some people think public transport should be free. Discuss both views and give your own opinion. Write at least 250 words.” Variantlar va to‘g‘ri javob kaliti kerak emas.
+5. Saqlang, ro‘yxatdan «Tekshirish va nashr qilish» amalini bajaring. Alohida Task 2 mashqi uchun faqat raqam 2 bilan topshiriq qo‘shish mumkin.
+6. Frontend → Writing → test. So‘z sanog‘i har bir Task uchun alohida; 150/250 tavsiyasi topshirishni bloklamaydi va avtomatik ball kamaytirmaydi. Bitta server muddati amal qiladi; 20/40 daqiqa tavsiyasi alohida majburiy timer emas.
+7. Javobni topshirgach, AI_ENABLED=1, GEMINI_API_KEY va assess_pending worker ishlasa baho keladi. Kalit yo‘q yoki AI xato bo‘lsa javob saqlanadi, taxminiy baho o‘ylab topilmaydi.
+8. Natijada har Task bahosi, to‘rtta mezon, javobdan dalil va yaxshilash tavsiyasi ko‘rinadi. Yangi AI hisobotlarida ko‘pi bilan uchta aniq xato uchun asl jumla, izoh va tuzatilgan inglizcha jumla bo‘ladi; mavjud eski hisobotlar o‘z holicha ochiladi.
+
+Task 1 — kamida 150 so‘z, taxminan 20 daqiqa; Task 2 — kamida 250 so‘z, taxminan 40 daqiqa va ikki baravar vazn. Manba: https://ielts.org/take-a-test/test-types/ielts-academic-test/ielts-academic-format-writing . Baho AI mashq taxmini; rasmiy IELTS natijasi emas.

@@ -15,6 +15,7 @@ def validate_exam(exam):
     if exam.section=='Listening' and not (exam.audio_file or exam.audio_url.startswith('https://') or exam.passage.strip()): errors.append('Listening uchun audio fayl, HTTPS havola yoki ovozli demo matni kerak.')
     if exam.section=='Writing' and len(questions)>2: errors.append('Writing uchun ko‘pi bilan ikkita topshiriq kiriting.')
     for q in questions:
+        if exam.section=='Writing' and q.position not in (1,2): errors.append('Writing topshiriq raqami 1 yoki 2 bo‘lsin.')
         if not q.prompt.strip(): errors.append(f'{q.position}: savol matni kerak.')
         if not isinstance(q.choices,list) or any(not isinstance(c,str) or not c.strip() for c in q.choices):
             errors.append(f'{q.position}: variantlar matnlar ro‘yxati bo‘lsin.')

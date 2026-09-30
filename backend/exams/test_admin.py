@@ -40,3 +40,24 @@ class ReadingAdminTests(TestCase):
         question = Question.objects.get(exam=exam)
         self.assertEqual(question.choices, ['Monday', 'Tuesday'])
         self.assertEqual(question.accepted_answers, ['Monday'])
+
+class WritingEditorTests(TestCase):
+    def test_saved_writing_draft_has_task_editor_without_answer_keys(self):
+        user=get_user_model().objects.create_superuser('writer','writer@example.com','test-password')
+        self.client.force_login(user)
+        exam=Exam.objects.create(title='Writing draft',section='Writing',duration_seconds=3600)
+        Question.objects.create(exam=exam,position=1,prompt='Summarise the table.')
+        response=self.client.get(f'/admin/exams/exam/{exam.pk}/change/')
+        self.assertEqual(response.status_code,200)
+        self.assertContains(response,'questions-0-prompt')
+        self.assertNotContains(response,'questions-0-accepted_answers')
+        self.assertNotContains(response,'id_audio_file')
+
+    def test_writing_positions_are_task_numbers(self):
+        from django.core.exceptions import ValidationError
+        from .services import validate_exam
+        exam=Exam.objects.create(title='Writing draft',section='Writing',duration_seconds=3600)
+        question=Question.objects.create(exam=exam,position=3,prompt='Discuss transport.')
+        with self.assertRaises(ValidationError):validate_exam(exam)
+        question.position=2;question.save()
+        validate_exam(exam)

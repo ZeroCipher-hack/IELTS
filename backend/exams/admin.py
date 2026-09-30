@@ -44,6 +44,9 @@ class Questions(admin.StackedInline):
     verbose_name_plural="Savollar — har biriga javob va dalil kiriting"
     extra=0
     fields=['position','prompt','choices','accepted_answers','skill_tag','evidence','explanation']
+    def get_fields(self,request,obj=None):
+        if obj and obj.section=='Writing':return ['position','prompt']
+        return self.fields
     def has_change_permission(self,request,obj=None):return not obj or not obj.published
     def has_add_permission(self,request,obj=None):return not obj or not obj.published
     def has_delete_permission(self,request,obj=None):return not obj or not obj.published
@@ -60,6 +63,10 @@ class ExamAdmin(admin.ModelAdmin):
 
     class Media:
         css={'all':('exams/admin.css',)}
+    def get_fieldsets(self,request,obj=None):
+        if obj and obj.section=='Writing':
+            return [self.fieldsets[0], ('2. Writing materiallari', {'fields':['passage'], 'description':'Task 1 jadvali yoki umumiy ma’lumotni shu yerga yozing. Quyida raqam 1 — Task 1, raqam 2 — Task 2. Prompt ichiga to‘liq topshiriqni yozing. Variant va javob kaliti kerak emas. Hozircha rasm yuklash qo‘llab-quvvatlanmaydi.'})]
+        return self.fieldsets
     def get_readonly_fields(self,request,obj=None):
         return ['title','section','version','duration_seconds','passage','audio_url','audio_file','listening_transcript','published'] if obj and obj.published else ['published']
     def has_delete_permission(self,request,obj=None):return not obj or not obj.published
