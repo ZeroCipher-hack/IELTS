@@ -61,3 +61,27 @@ class WritingEditorTests(TestCase):
         with self.assertRaises(ValidationError):validate_exam(exam)
         question.position=2;question.save()
         validate_exam(exam)
+
+class AssessmentRetryTests(TestCase):
+    def test_retry_preserves_objective_score_and_skips_missing_speaking_audio(self):
+        from unittest.mock import patch
+        from django.contrib import admin
+        from django.contrib.auth import get_user_model
+        from django.test import RequestFactory
+        from django.utils import timezone
+        from .admin import AssessmentJobAdmin
+        from .models import Attempt,AssessmentJob
+        user=get_user_model().objects.create_user('retry@example.com')
+        exam=Exam.objects.create(title='Retry',section='Reading')
+        result={'correct':1,'total':2,'rows':[{'position':1,'correct':True}]}
+        reading=Attempt.objects.create(user=user,exam=exam,state='graded',snapshot={'section':'Reading'},result=result,deadline=timezone.now())
+        speaking=Attempt.objects.create(user=user,exam=exam,state='awaiting_assessment',snapshot={'section':'Speaking'},deadline=timezone.now())
+        objective=AssessmentJob.objects.create(attempt=reading,state='failed',tries=3,error_code='AI_RATE_LIMIT')
+        missing=AssessmentJob.objects.create(attempt=speaking,state='failed',tries=3)
+        editor=AssessmentJobAdmin(AssessmentJob,admin.site)
+        with patch.object(editor,'message_user'):
+            editor.retry_failed(RequestFactory().post('/admin/'),AssessmentJob.objects.all())
+        objective.refresh_from_db();missing.refresh_from_db();reading.refresh_from_db()
+        self.assertEqual(objective.state,'pending');self.assertEqual(objective.tries,0)
+        self.assertEqual(missing.state,'failed');self.assertEqual(missing.tries,3)
+        self.assertEqual(reading.state,'graded');self.assertEqual(reading.result,result)

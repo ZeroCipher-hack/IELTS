@@ -2,6 +2,7 @@ from django.contrib import admin,messages
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Q
 from .models import Exam,Question,Attempt,Profile,Entitlement,AssessmentJob,SpeakingSet
 from .services import validate_exam
 
@@ -122,7 +123,12 @@ class AssessmentJobAdmin(admin.ModelAdmin):
     @admin.action(description='AI xatosini tuzatgandan keyin qayta baholash')
     def retry_failed(self,request,queryset):
         from django.utils import timezone
-        queryset.filter(state='failed',attempt__state='awaiting_assessment').update(state='pending',tries=0,error_code='',lease=None,available_at=timezone.now())
+        failed=queryset.filter(state='failed')
+        eligible=failed.filter(Q(attempt__state='graded',attempt__snapshot__section__in=['Reading','Listening']) | Q(attempt__state='awaiting_assessment',attempt__snapshot__section='Writing') | Q(attempt__state='awaiting_assessment',attempt__snapshot__section='Speaking',attempt__speaking_recording__isnull=False))
+        skipped=failed.count()-eligible.count()
+        updated=eligible.update(state='pending',tries=0,error_code='',lease=None,available_at=timezone.now())
+        self.message_user(request,f'{updated} ta AI ishi qayta navbatga qo‘yildi. Ball va javoblar o‘zgarmadi.',messages.SUCCESS)
+        if skipped:self.message_user(request,f'{skipped} ta ish qayta qo‘yilmadi. Speaking audiosi o‘chirilgan bo‘lsa yangi mashq yozish kerak.',messages.WARNING)
 
 
 class SpeakingSetForm(forms.ModelForm):
