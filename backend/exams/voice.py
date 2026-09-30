@@ -27,23 +27,47 @@ PART3_QUESTIONS = (
 def question_script(questions):
     return ' '.join(f'{index}. {question}' for index, question in enumerate(questions, 1))
 
+def builtin_script():
+    return {'set_id':None,'set_title':'Default Speaking practice','set_version':1,'cue':CUE,
+            'questions':{'1':PART1_QUESTIONS,'3':PART3_QUESTIONS}}
+
+def published_script(identifier=None,latest=False):
+    from .models import SpeakingSet
+    from django.core.exceptions import ValidationError
+    queryset=SpeakingSet.objects.filter(published=True)
+    if latest:
+        selected=queryset.order_by('-pk').first()
+        if not selected:return builtin_script()
+    elif identifier is None:return builtin_script()
+    else:
+        if type(identifier) is not int or identifier<1:raise ValueError('VOICE_SET_INVALID')
+        selected=queryset.filter(pk=identifier).first()
+        if not selected:raise ValueError('VOICE_SET_INVALID')
+    try:selected.full_clean()
+    except ValidationError:raise ValueError('VOICE_SET_INVALID') from None
+    return {'set_id':selected.pk,'set_title':selected.title,'set_version':selected.version,
+            'cue':{'title':selected.cue_title,'points':selected.cue_points},
+            'questions':{'1':selected.part1_questions,'3':selected.part3_questions}}
+
 def access(user):
     allowed = user.is_staff or settings.VOICE_PRACTICE_ENABLED
-    return {'configured': configured(), 'allowed': allowed, 'reason': 'AI_NOT_CONFIGURED' if not configured() else '' if allowed else 'VOICE_PRACTICE_DISABLED', 'cue': CUE,
-            'questions': {'1': PART1_QUESTIONS, '3': PART3_QUESTIONS}}
+    return {'configured': configured(), 'allowed': allowed, 'reason': 'AI_NOT_CONFIGURED' if not configured() else '' if allowed else 'VOICE_PRACTICE_DISABLED',
+            **published_script(latest=True)}
 
-def constraints(part):
+def constraints(part,script=None):
+    script=script or builtin_script()
+    cue=script['cue'];part1=script['questions']['1'];part3=script['questions']['3']
     instructions = {
         1: 'Conduct Part 1 (introduction and interview). Briefly greet the candidate without asking for identity documents. '
            'Ask these familiar-topic questions in their numbered order, one at a time, waiting for a complete answer before moving to the next: '
-           + question_script(PART1_QUESTIONS),
+           + question_script(part1),
         2: 'Conduct Part 2 (individual long turn). The candidate has already had one minute to prepare this cue card: '
-           + CUE['title'] + ' ' + '; '.join(CUE['points']) + '. Say exactly: Please begin your talk. ' + CUE['title'] + ' '
+           + cue['title'] + ' ' + '; '.join(cue['points']) + '. Say exactly: Please begin your talk. ' + cue['title'] + ' '
            'Let them speak for up to two minutes. Do not interrupt pauses, switch topics, ask another question or start a conversation. '
            'If they finish early, wait quietly for the timer.',
         3: 'Conduct Part 3 (abstract discussion) about public places and communities, related to the Part 2 cue card: '
-           + CUE['title'] + '. Ask these questions in their numbered order, one at a time, waiting for a complete answer: '
-           + question_script(PART3_QUESTIONS),
+           + cue['title'] + '. Ask these questions in their numbered order, one at a time, waiting for a complete answer: '
+           + question_script(part3),
     }
     return {'model': 'models/'+settings.GEMINI_LIVE_MODEL, 'generationConfig': {'responseModalities': ['AUDIO']}, 'inputAudioTranscription': {}, 'outputAudioTranscription': {},
         'systemInstruction': {'parts': [{'text': 'You are an AI English speaking practice examiner, not a human examiner. Speak only English. '

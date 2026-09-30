@@ -1,10 +1,10 @@
-from django.test import SimpleTestCase, override_settings
+from django.test import TestCase, override_settings
 
 from .voice import CUE, PART1_QUESTIONS, PART3_QUESTIONS, access, constraints
 
 
 @override_settings(GEMINI_LIVE_MODEL='test-live-model')
-class SpeakingScriptTests(SimpleTestCase):
+class SpeakingScriptTests(TestCase):
     def instruction(self, part):
         return constraints(part)['systemInstruction']['parts'][0]['text']
 

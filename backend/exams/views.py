@@ -205,22 +205,24 @@ def voice_status(request):
 
 @endpoint(['POST'])
 def voice_token(request):
-    from .voice import access,constraints
+    from .voice import access,constraints,published_script
     from .gemini import post,AIError
     state=access(request.user)
     if not state['allowed']:return error('VOICE_PRACTICE_DISABLED',403)
     if not state['configured']:return error('AI_NOT_CONFIGURED',503)
     d=body(request);part=d.get('part',1)
     if type(part) is not int or part not in (1,2,3):return error('VOICE_PART_INVALID')
+    try:script=published_script(d.get('set_id'),latest='set_id' not in d)
+    except ValueError:return error('VOICE_SET_INVALID')
     if throttle('voice:'+str(request.user.pk)):return error('AI_RATE_LIMIT',429)
-    now=timezone.now();locked=constraints(part)
+    now=timezone.now();locked=constraints(part,script)
     try:
         token=post('auth_tokens',{'uses':1,'expireTime':(now+timedelta(minutes=5)).isoformat(),
             'newSessionExpireTime':(now+timedelta(seconds=60)).isoformat(),'bidiGenerateContentSetup':locked})
         name=token.get('name')
         if not isinstance(name,str) or not name:raise AIError('AI_TOKEN_INVALID')
     except AIError as exc:return error(str(exc),503)
-    response=JsonResponse({'token':name,'model':locked['model'],'expires_in':300,'part':part})
+    response=JsonResponse({'token':name,'model':locked['model'],'expires_in':300,'part':part,'set_id':script['set_id']})
     response['Cache-Control']='no-store'
     return response
 
