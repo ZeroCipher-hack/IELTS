@@ -74,3 +74,29 @@ class SpeakingRecording(models.Model):
     attempt=models.OneToOneField(Attempt,on_delete=models.CASCADE,related_name='speaking_recording')
     # Private, bounded audio segments. Deleted after successful assessment.
     segments=models.JSONField(default=list)
+
+class SpeakingSet(models.Model):
+    title=models.CharField(max_length=180)
+    version=models.PositiveIntegerField(default=1)
+    published=models.BooleanField(default=False)
+    part1_questions=models.JSONField(default=list)
+    cue_title=models.CharField(max_length=500)
+    cue_points=models.JSONField(default=list)
+    part3_questions=models.JSONField(default=list)
+
+    class Meta:
+        verbose_name='Speaking savol to‘plami'
+        verbose_name_plural='Speaking savol to‘plamlari'
+
+    def __str__(self):return f'{self.title} · v{self.version}'
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        errors={}
+        for name,limit in [('part1_questions',15),('cue_points',5),('part3_questions',12)]:
+            values=getattr(self,name)
+            minimum=3 if name=='cue_points' else 1
+            if not isinstance(values,list) or not minimum<=len(values)<=limit or any(not isinstance(value,str) or not value.strip() or len(value)>500 for value in values):
+                errors[name]=f'{minimum}–{limit} ta matn kiriting; har biri 500 belgidan oshmasin.'
+        if not self.cue_title.strip():errors['cue_title']='Cue card mavzusi kerak.'
+        if errors:raise ValidationError(errors)

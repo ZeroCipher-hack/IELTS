@@ -2,7 +2,7 @@ from django.contrib import admin,messages
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from .models import Exam,Question,Attempt,Profile,Entitlement,AssessmentJob
+from .models import Exam,Question,Attempt,Profile,Entitlement,AssessmentJob,SpeakingSet
 from .services import validate_exam
 
 class ExamForm(forms.ModelForm):
@@ -123,3 +123,42 @@ class AssessmentJobAdmin(admin.ModelAdmin):
     def retry_failed(self,request,queryset):
         from django.utils import timezone
         queryset.filter(state='failed',attempt__state='awaiting_assessment').update(state='pending',tries=0,error_code='',lease=None,available_at=timezone.now())
+
+
+class SpeakingSetForm(forms.ModelForm):
+    part1_questions=AnswerLinesField(label='Part 1 — tanish mavzular',help_text='Har qatorga bitta inglizcha savol. Savollar shu tartibda beriladi.')
+    cue_points=AnswerLinesField(label='Part 2 — tayanch punktlar',help_text='Har qatorga bittadan, 3–5 ta inglizcha punkt.')
+    part3_questions=AnswerLinesField(label='Part 3 — mavzuga bog‘liq savollar',help_text='Har qatorga bitta inglizcha savol. Cue card mavzusiga bog‘liq umumiy savollar kiriting.')
+
+    class Meta:
+        model=SpeakingSet
+        fields='__all__'
+        labels={'title':'To‘plam nomi','version':'Versiya','cue_title':'Part 2 — cue card mavzusi'}
+
+@admin.register(SpeakingSet)
+class SpeakingSetAdmin(admin.ModelAdmin):
+    form=SpeakingSetForm
+    list_display=['title','version','published']
+    list_filter=['published']
+    search_fields=['title']
+    actions=['publish_checked','duplicate_draft']
+    fieldsets=[('1. To‘plam',{'fields':['title','version','published'],'description':'Oxirgi nashr qilingan to‘plam yangi suhbatlar uchun tanlanadi. Boshlangan suhbat avvalgi to‘plamida qoladi.'}),
+        ('2. Savollar ketma-ketligi',{'fields':['part1_questions','cue_title','cue_points','part3_questions']})]
+    class Media:
+        css={'all':('exams/admin.css',)}
+    def get_readonly_fields(self,request,obj=None):
+        return [field.name for field in self.model._meta.fields] if obj and obj.published else ['published']
+    def has_delete_permission(self,request,obj=None):return not obj or not obj.published
+    @admin.action(description='Tekshirish va nashr qilish')
+    def publish_checked(self,request,queryset):
+        for item in queryset:
+            try:
+                item.full_clean();item.published=True;item.save(update_fields=['published'])
+                self.message_user(request,f'{item.title}: nashr qilindi.',messages.SUCCESS)
+            except ValidationError as exc:self.message_user(request,' '.join(exc.messages),messages.ERROR)
+    @admin.action(description='Yangi versiyaga nusxalash (qoralama)')
+    def duplicate_draft(self,request,queryset):
+        with transaction.atomic():
+            for item in queryset:
+                item.pk=None;item.published=False;item.version+=1;item.save()
+        self.message_user(request,'Speaking qoralamalari yaratildi.',messages.SUCCESS)
