@@ -753,3 +753,11 @@ html[data-theme="dark"] .examiner-character { background:radial-gradient(ellipse
  .full-exam-report-score { align-items:flex-start; flex-direction:column; gap:4px; }
  .full-exam-report-score strong { font-size:50px; }
 }
+
+/* Reading workspace: comfortable paragraphs and clear answer states. */
+.section-reading .reading-copy p { margin: 0 0 1.5em; white-space: pre-wrap; }
+.section-reading .reading-passage { background: var(--card); }
+.section-reading .live-question { padding: 22px; border: 1px solid var(--border); border-radius: 16px; margin-bottom: 20px; }
+.section-reading .live-options label:has(input:checked) { border-color: var(--exam-color); background: color-mix(in srgb, var(--exam-color) 10%, var(--card)); }
+.section-reading .question-nav { gap: 8px; padding-bottom: 16px; }
+.section-reading .question-nav button:focus-visible { outline: 3px solid var(--exam-color); outline-offset: 3px; }
