@@ -7,7 +7,7 @@ from .models import Exam,Attempt,AssessmentJob
 from .gemini import AIError,validate_report,CRITERIA,assess_writing
 from .management.commands.assess_pending import process_one
 
-@override_settings(AI_ENABLED=True,GEMINI_API_KEY='test-only-placeholder')
+@override_settings(AI_ENABLED=True,GEMINI_API_KEY='test-only-placeholder',VOICE_PRACTICE_ENABLED=False)
 class AIIntegrationTests(TestCase):
     def setUp(self):
         self.user=get_user_model().objects.create_user('pilot@example.com')
