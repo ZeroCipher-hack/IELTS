@@ -5,7 +5,6 @@ import { RefreshCw, TriangleAlert } from 'lucide-react';
 
 export default function DashboardError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    // eslint-disable-next-line no-console
     console.error(error);
   }, [error]);
 

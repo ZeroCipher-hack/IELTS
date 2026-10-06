@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { ArrowRight, BookOpen, Headphones, Mic, PenLine, Plus, Target } from 'lucide-react';
+import { ArrowRight, BookOpen, Headphones, PenLine, Plus, Target } from 'lucide-react';
 import { useProduct } from '@/components/product/product-context';
 import LoadingSkeleton from '@/components/product/loading-skeleton';
 
@@ -8,7 +8,6 @@ const sections = [
   { name: 'Listening', Icon: Headphones, detail: 'Audio · 4 parts' },
   { name: 'Reading', Icon: BookOpen, detail: 'Passages · 3 parts' },
   { name: 'Writing', Icon: PenLine, detail: 'Essay · 2 tasks' },
-  { name: 'Speaking', Icon: Mic, detail: 'Conversation · 3 parts' },
 ] as const;
 
 export default function DashboardPage() {
@@ -62,7 +61,7 @@ export default function DashboardPage() {
       <div className="product-skill-grid">
         {sections.map(({ name, Icon, detail }) => {
           const a = graded.find((a) => a.section === name);
-          const href = name === 'Speaking' ? '/dashboard/speaking' : `/dashboard/tests?section=${name}`;
+          const href = `/dashboard/tests?section=${name}`;
           return (
             <Link className={'panel skill-action skill-' + name.toLowerCase()} key={name} href={href}>
               <span className="skill-icon"><Icon size={24} /></span>

@@ -30,7 +30,7 @@ export default function ExamPage() {
           return;
         }
         if (!free && !exam.has_access) {
-          router.replace(`/dashboard/payments?exam=${encodeURIComponent(exam.title)}`);
+          router.replace('/dashboard/tests');
           return;
         }
         const a = await api<Attempt>('attempts/', 'POST', { exam_id: exam.id, accept_pending_assessment: exam.section === 'Writing' });

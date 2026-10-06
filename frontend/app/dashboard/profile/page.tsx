@@ -1,12 +1,10 @@
 'use client';
-import { useRouter } from 'next/navigation';
 import { Camera, UserRound } from 'lucide-react';
 import { useProduct } from '@/components/product/product-context';
 import { api, type User } from '@/components/product/api';
 import { copy } from '@/components/product/i18n';
 
 export default function ProfilePage() {
-  const router = useRouter();
   const { t, say, user, displayName, language, busy, run, uploadAvatar, setUser, setLanguage, setNotice } = useProduct();
   if (!user) return null;
 
@@ -104,7 +102,6 @@ export default function ProfilePage() {
           <button className="primary" disabled={busy}>{busy ? t.working : t.save}</button>
         </form>
       </div>
-      <button className="secondary" onClick={() => router.push('/dashboard/speaking')}>{say('Speaking oynasini ochish', 'Open speaking studio', 'Открыть Speaking')}</button>
     </>
   );
 }
