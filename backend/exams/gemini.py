@@ -1,5 +1,5 @@
 """Server-only Gemini transport. Never log credentials, prompts or provider errors."""
-import json,math,re
+import json,logging,math,re
 from urllib.request import Request,urlopen
 from urllib.error import HTTPError,URLError
 from django.conf import settings
@@ -17,7 +17,9 @@ def post(path,data):
             raw=response.read(1024*1024+1)
             if len(raw)>1024*1024:raise AIError('AI_RESPONSE_TOO_LARGE')
             return json.loads(raw)
-    except HTTPError as exc:raise AIError('AI_RATE_LIMIT' if exc.code==429 else 'AI_PROVIDER_ERROR') from None
+    except HTTPError as exc:
+        logging.getLogger('exams.ai').warning('Gemini HTTP %s',exc.code)
+        raise AIError('AI_RATE_LIMIT' if exc.code==429 else 'AI_PROVIDER_ERROR') from None
     except (URLError,TimeoutError,OSError,ValueError):raise AIError('AI_UNAVAILABLE') from None
 
 CRITERIA=('task_response','coherence_cohesion','lexical_resource','grammar')
