@@ -1,5 +1,6 @@
 import uuid
 from django.conf import settings
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
 class Exam(models.Model):
@@ -10,6 +11,8 @@ class Exam(models.Model):
     duration_seconds=models.PositiveIntegerField(default=600)
     passage=models.TextField(blank=True)
     audio_url=models.URLField(blank=True)
+    audio_file=models.FileField(upload_to='exam_audio/',blank=True,validators=[FileExtensionValidator(['mp3','m4a','ogg','wav'])],
+        help_text='Listening audio (mp3, m4a, ogg, wav). Served only to the signed-in test taker.')
     # Only drafts can be edited; attempts additionally retain a complete snapshot.
     def __str__(self): return f'{self.title} · v{self.version}'
 class Question(models.Model):
