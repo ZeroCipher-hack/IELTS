@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { AudioLines, BarChart3, BookOpen, CalendarDays, CreditCard, Home, LogOut, UserRound, ArrowRight } from 'lucide-react';
+import { AudioLines, BarChart3, BookOpen, CalendarDays, Home, LogOut, UserRound, ArrowRight } from 'lucide-react';
 import { useProduct } from './product-context';
 import ThemeToggle from './theme-toggle';
 import type { Language } from './api';
@@ -18,7 +18,6 @@ export default function SiteHeader() {
     ['/dashboard/results', t.results, BarChart3],
     ['/dashboard/analytics', say('Analitika', 'Analytics', 'Аналитика'), BarChart3],
     ['/dashboard/plan', t.plan, CalendarDays],
-    ['/dashboard/payments', say('To‘lovlar', 'Payments', 'Оплата'), CreditCard],
   ] as const;
 
   const languages = (

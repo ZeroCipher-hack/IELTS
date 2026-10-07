@@ -1,6 +1,5 @@
 /* frontend/app/globals.css — TO'LIQ FAYL */
 @import "tailwindcss";
-@import "tw-animate-css";
 @theme inline { --color-navy: var(--navy); --color-navy-foreground: var(--navy-foreground); }
 .landing-page {  --radius: 1.5rem;
   --font-sans:
@@ -37,14 +36,6 @@
   --chart-3: #FF6B35;
   --chart-4: #FFC93C;
   --chart-5: #7B5EEA;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #1A1A2E;
-  --sidebar-primary: #3654E0;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #FFF3DC;
-  --sidebar-accent-foreground: #1A1A2E;
-  --sidebar-border: #E8940F;
-  --sidebar-ring: #3654E0;
  color-scheme: light; font-family: var(--font-sans); line-height:1.5;
 }
 .landing-page .hero-surface { background: var(--background); }

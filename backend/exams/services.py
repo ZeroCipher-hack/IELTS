@@ -10,7 +10,8 @@ def validate_exam(exam):
     if not 60 <= exam.duration_seconds <= 14400: errors.append('Davomiylik 60–14400 soniya bo‘lsin.')
     if not questions: errors.append('Kamida bitta topshiriq kiriting.')
     if exam.section=='Reading' and not exam.passage.strip(): errors.append('Reading matni kerak.')
-    if exam.section=='Listening' and not exam.audio_url.startswith('https://'): errors.append('Listening uchun HTTPS audio havolasi kerak.')
+    if exam.section=='Listening' and not exam.audio_file and not exam.audio_url.startswith('https://'): errors.append('Listening uchun audio fayl yoki HTTPS audio havolasi kerak.')
+    if exam.audio_file and exam.audio_file.size>100*1024*1024: errors.append('Audio fayl 100 MB dan oshmasin.')
     if exam.section=='Writing' and len(questions)>2: errors.append('Writing uchun ko‘pi bilan ikkita topshiriq kiriting.')
     for q in questions:
         if not q.prompt.strip(): errors.append(f'{q.position}: savol matni kerak.')

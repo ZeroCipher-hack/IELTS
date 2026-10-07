@@ -20,7 +20,7 @@ class ExamAdmin(admin.ModelAdmin):
     inlines=[Questions]
     actions=['publish_checked','duplicate_draft']
     def get_readonly_fields(self,request,obj=None):
-        return ['title','section','version','duration_seconds','passage','audio_url','published'] if obj and obj.published else ['published']
+        return ['title','section','version','duration_seconds','passage','audio_url','audio_file','published'] if obj and obj.published else ['published']
     def has_delete_permission(self,request,obj=None):return not obj or not obj.published
     @admin.action(description='Tekshirish va nashr qilish')
     def publish_checked(self,request,queryset):

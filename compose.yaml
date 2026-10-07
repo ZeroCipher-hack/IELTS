@@ -27,6 +27,7 @@ services:
         condition: service_healthy
     volumes:
       - static_files:/app/staticfiles
+      - media_files:/app/media
     ports:
       - "8001:8000"
   ai_worker:
@@ -67,5 +68,6 @@ services:
 volumes:
   postgres_data:
   static_files:
+  media_files:
   caddy_data:
   caddy_config:

@@ -11,7 +11,7 @@ Set these in the **server** environment (or the root .env consumed by Compose):
 ```
 AI_ENABLED=1
 GEMINI_API_KEY=YOUR_NEW_PRIVATE_KEY
-GEMINI_WRITING_MODEL=gemini-2.5-flash
+GEMINI_WRITING_MODEL=gemini-3.8-flash
 GEMINI_LIVE_MODEL=gemini-3.1-flash-live-preview
 ```
 

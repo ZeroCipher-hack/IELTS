@@ -10,7 +10,7 @@ import type { Language } from './api';
 
 export default function AuthScreen({ mode }: { mode: 'login' | 'register' }) {
   const router = useRouter();
-  const { t, say, language, setLanguage, ready, available, error, setError, busy, connect, authenticate, user } = useProduct();
+  const { t, language, setLanguage, ready, available, error, setError, busy, connect, authenticate, user } = useProduct();
   const [localMode, setLocalMode] = useState(mode);
   const isRegister = localMode === 'register';
 

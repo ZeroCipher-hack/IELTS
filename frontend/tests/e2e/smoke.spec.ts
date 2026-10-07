@@ -35,8 +35,6 @@ test.describe('Ro‘yxatdan o‘tish va dashboard oqimi', () => {
       ['/dashboard/results', /natijalar|results/i],
       ['/dashboard/analytics', /analitika|analytics/i],
       ['/dashboard/plan', /haftalik reja|weekly plan/i],
-      ['/dashboard/payments', /to‘lov|payment/i],
-      ['/dashboard/speaking', /suhbatga tayyor|nova|speaking/i],
       ['/dashboard/profile', /profil|profile/i],
     ];
 

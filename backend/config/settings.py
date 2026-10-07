@@ -22,6 +22,7 @@ else:
     DATABASES={'default':{'ENGINE':'django.db.backends.sqlite3','NAME':BASE_DIR/'db.sqlite3','OPTIONS':{'timeout':20}}}
 AUTH_PASSWORD_VALIDATORS=[{'NAME':'django.contrib.auth.password_validation.MinimumLengthValidator','OPTIONS':{'min_length':10}},{'NAME':'django.contrib.auth.password_validation.CommonPasswordValidator'},{'NAME':'django.contrib.auth.password_validation.NumericPasswordValidator'}]
 LANGUAGE_CODE='uz';TIME_ZONE='UTC';USE_I18N=True;USE_TZ=True
+MEDIA_ROOT=BASE_DIR/'media'
 STATIC_URL='static/';STATIC_ROOT=BASE_DIR/'staticfiles';DEFAULT_AUTO_FIELD='django.db.models.BigAutoField'
 CSRF_TRUSTED_ORIGINS=os.getenv('CSRF_TRUSTED_ORIGINS','http://localhost:3000,http://127.0.0.1:3000').split(',')
 SESSION_COOKIE_HTTPONLY=True
@@ -38,7 +39,7 @@ if os.getenv('DJANGO_TRUST_PROXY')=='1':
 
 AI_ENABLED=os.getenv('AI_ENABLED','0')=='1'
 GEMINI_API_KEY=os.getenv('GEMINI_API_KEY','')
-GEMINI_WRITING_MODEL=os.getenv('GEMINI_WRITING_MODEL','gemini-2.5-flash')
+GEMINI_WRITING_MODEL=os.getenv('GEMINI_WRITING_MODEL','gemini-3.8-flash')
 GEMINI_LIVE_MODEL=os.getenv('GEMINI_LIVE_MODEL','gemini-3.1-flash-live-preview')
 
 VOICE_PRACTICE_ENABLED=os.getenv('VOICE_PRACTICE_ENABLED','0')=='1'

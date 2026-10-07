@@ -1,4 +1,4 @@
-import hashlib,json
+import hashlib,json,mimetypes,re
 from datetime import timedelta
 from functools import wraps
 from django.conf import settings
@@ -6,7 +6,8 @@ from django.contrib.auth import authenticate,login,logout,get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.db import transaction,IntegrityError
-from django.http import JsonResponse
+from django.core.files.storage import default_storage
+from django.http import JsonResponse,HttpResponse,StreamingHttpResponse
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
@@ -95,7 +96,7 @@ def payload(a,include_questions=True):
         data['assessment_error']=job.error_code if job else ''
         data['assessment_status']=('disabled' if not configured() else job.state if job else 'pending')
     if include_questions:
-        data.update({'passage':snap['passage'],'audio_url':snap.get('audio_url',''),'questions':[{k:v for k,v in q.items() if k not in ['accepted_answers','evidence','explanation']} for q in snap['questions']]})
+        data.update({'passage':snap['passage'],'audio_url':f'/api/attempts/{a.id}/audio' if snap.get('audio_file') else snap.get('audio_url',''),'questions':[{k:v for k,v in q.items() if k not in ['accepted_answers','evidence','explanation']} for q in snap['questions']]})
     return data
 @endpoint(['GET','POST'])
 def attempts(request):
@@ -127,7 +128,7 @@ def attempts(request):
                 entitlement=Entitlement.objects.select_for_update().filter(user=request.user,exam=exam,consumed=False).first()
                 if not entitlement:return error('Bepul urinish ishlatilgan. To‘lov hali ulanmagan; administrator kirish huquqi bera oladi.',402)
                 entitlement.consumed=True;entitlement.save()
-        snapshot={'title':exam.title,'section':exam.section,'version':exam.version,'passage':exam.passage,'audio_url':exam.audio_url,'questions':qs,'feedback_language':profile.language}
+        snapshot={'title':exam.title,'section':exam.section,'version':exam.version,'passage':exam.passage,'audio_url':exam.audio_url,'audio_file':exam.audio_file.name if exam.audio_file else '','questions':qs,'feedback_language':profile.language}
         a=Attempt.objects.create(user=request.user,exam=exam,snapshot=snapshot,deadline=timezone.now()+timedelta(seconds=exam.duration_seconds))
     return JsonResponse(payload(a),status=201)
 def clean_answers(d,snapshot):
@@ -260,3 +261,39 @@ def speaking_submit(request):
         SpeakingRecording.objects.create(attempt=a,segments=segments)
         AssessmentJob.objects.create(attempt=a)
     return JsonResponse(payload(a),status=201)
+
+
+def _byte_range(header,size):
+    """Parse a single 'bytes=a-b' range. None: no range, False: unsatisfiable."""
+    match=re.fullmatch(r'bytes=(\d*)-(\d*)',(header or '').strip())
+    if not match or not (match[1] or match[2]):return None
+    if match[1]:start=int(match[1]);end=min(int(match[2]) if match[2] else size-1,size-1)
+    else:start=max(size-int(match[2]),0);end=size-1
+    return (start,end) if 0<=start<=end else False
+
+def _chunks(handle,start,length,block=64*1024):
+    try:
+        handle.seek(start)
+        while length>0:
+            data=handle.read(min(block,length))
+            if not data:break
+            length-=len(data);yield data
+    finally:handle.close()
+
+@endpoint(['GET'])
+def attempt_audio(request,pk):
+    a=Attempt.objects.filter(pk=pk,user=request.user).first()
+    name=(a.snapshot.get('audio_file') if a else '') or ''
+    if not name:return error('Audio topilmadi.',404)
+    try:handle=default_storage.open(name,'rb');size=handle.size
+    except (OSError,ValueError):return error('Audio fayl topilmadi.',404)
+    span=_byte_range(request.headers.get('Range'),size)
+    if span is False:
+        handle.close();response=HttpResponse(status=416);response['Content-Range']=f'bytes */{size}';return response
+    start,end=span if span else (0,size-1)
+    response=StreamingHttpResponse(_chunks(handle,start,end-start+1),status=206 if span else 200,
+        content_type=mimetypes.guess_type(name)[0] or 'audio/mpeg')
+    response['Content-Length']=str(end-start+1);response['Accept-Ranges']='bytes'
+    if span:response['Content-Range']=f'bytes {start}-{end}/{size}'
+    response['Cache-Control']='private, max-age=3600';response['X-Content-Type-Options']='nosniff'
+    return response
