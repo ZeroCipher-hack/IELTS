@@ -19,7 +19,11 @@ WSGI_APPLICATION='config.wsgi.application'
 if os.getenv('POSTGRES_HOST'):
     DATABASES={'default':{'ENGINE':'django.db.backends.postgresql','NAME':os.getenv('POSTGRES_DB','ieltsqa'),'USER':os.getenv('POSTGRES_USER','ieltsqa'),'PASSWORD':os.environ['POSTGRES_PASSWORD'],'HOST':os.environ['POSTGRES_HOST'],'PORT':os.getenv('POSTGRES_PORT','5432')}}
 else:
-    DATABASES={'default':{'ENGINE':'django.db.backends.sqlite3','NAME':BASE_DIR/'db.sqlite3','OPTIONS':{'timeout':20}}}
+    # WAL lets readers run while one writer holds the lock; without it concurrent
+    # browser requests on the dev server hit "database is locked". Production uses
+    # PostgreSQL, so this only affects local development.
+    DATABASES={'default':{'ENGINE':'django.db.backends.sqlite3','NAME':BASE_DIR/'db.sqlite3',
+        'OPTIONS':{'timeout':20,'init_command':'PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;'}}}
 AUTH_PASSWORD_VALIDATORS=[{'NAME':'django.contrib.auth.password_validation.MinimumLengthValidator','OPTIONS':{'min_length':10}},{'NAME':'django.contrib.auth.password_validation.CommonPasswordValidator'},{'NAME':'django.contrib.auth.password_validation.NumericPasswordValidator'}]
 LANGUAGE_CODE='uz';TIME_ZONE='UTC';USE_I18N=True;USE_TZ=True
 STATIC_URL='static/';STATIC_ROOT=BASE_DIR/'staticfiles';DEFAULT_AUTO_FIELD='django.db.models.BigAutoField'

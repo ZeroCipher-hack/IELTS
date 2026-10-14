@@ -12,7 +12,7 @@ class Questions(admin.StackedInline):
     extra=1
     verbose_name='Savol'
     verbose_name_plural='Savollar — har bir savol uchun bitta blok to\u2018ldiring'
-    fields=['position','prompt','choices','accepted_answers','skill_tag','evidence','explanation']
+    fields=['part','position','prompt','audio_file','choices','accepted_answers','skill_tag','evidence','explanation']
     def has_change_permission(self,request,obj=None):return not obj or not obj.published
     def has_add_permission(self,request,obj=None):return not obj or not obj.published
     def has_delete_permission(self,request,obj=None):return not obj or not obj.published
@@ -31,7 +31,8 @@ class ExamAdmin(admin.ModelAdmin):
         ('2. Material',{'fields':['passage','audio_file','audio_url'],
             'description':'Reading \u2192 matn majburiy. Listening \u2192 audio fayl yuklang (yoki HTTPS havola), '
                           'transkriptni matn maydoniga qo\u2018ying. Writing \u2192 matn maydoni ixtiyoriy, '
-                          'topshiriqlarni quyidagi savollar bo\u2018limiga yozing.'}),
+                          'topshiriqlarni quyidagi savollar bo\u2018limiga yozing. '
+                          'Speaking \u2192 bu maydonlar bo\u2018sh; har bir savolga qism va o\u2018z audiosini bering.'}),
         ('3. Holat',{'fields':['published'],
             'description':'Bu yerdan belgilamang. Pastdagi ro\u2018yxatdan testni tanlab, '
                           '\u00abTekshirish va nashr qilish\u00bb amalini ishlating \u2014 u avval xatolarni tekshiradi. '

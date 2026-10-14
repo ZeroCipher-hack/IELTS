@@ -86,6 +86,29 @@ WRITING_ITEMS = [
 ]
 
 
+SPEAKING_TITLE = 'Speaking interview — original demo'
+SPEAKING_PASSAGE = (
+    'Bu suhbat uch qismdan iborat. Imtihon oluvchi savollarni ketma-ket beradi; '
+    'siz ovozingizni yozib javob berasiz. Part 2 da avval bir daqiqa tayyorgarlik vaqti beriladi.'
+)
+# (part, prompt, cue points, seconds allowed)
+SPEAKING_ITEMS = [
+    (1, 'Can you tell me about the place where you live?', [], 60),
+    (1, 'What do you usually do in the evenings?', [], 60),
+    (1, 'Do you prefer studying alone or with other people? Why?', [], 60),
+    (1, 'How important is it to learn a foreign language where you live?', [], 60),
+    (2, 'Describe a skill you would like to learn.', [
+        'What the skill is',
+        'Why you want to learn it',
+        'How you would go about learning it',
+        'And explain how this skill would change your daily life',
+    ], 120),
+    (3, 'Why do you think some skills are harder to learn as an adult than as a child?', [], 90),
+    (3, 'How has the way people learn new skills changed in the last twenty years?', [], 90),
+    (3, 'Should schools spend more time on practical skills than on academic subjects?', [], 90),
+]
+
+
 class Command(BaseCommand):
     help = 'Create original demo exams for Reading, Listening and Writing; never overwrite existing content.'
 
@@ -93,6 +116,7 @@ class Command(BaseCommand):
         self.seed_reading()
         self.seed_listening()
         self.seed_writing()
+        self.seed_speaking()
 
     def seed_reading(self):
         if Exam.objects.filter(title=READING_TITLE).exists():
@@ -138,3 +162,22 @@ class Command(BaseCommand):
         exam.save()
         self.stdout.write(self.style.SUCCESS(
             'Writing: yaratildi va nashr qilindi. Baho AI ulanganda chiqadi (GEMINI_API_KEY + AI_ENABLED=1).'))
+
+    def seed_speaking(self):
+        if Exam.objects.filter(title=SPEAKING_TITLE).exists():
+            self.stdout.write('Speaking: allaqachon mavjud.')
+            return
+        # 4 + 1 + 3 questions, plus a minute of preparation before Part 2.
+        total = sum(seconds for _, _, _, seconds in SPEAKING_ITEMS) + 60
+        exam = Exam.objects.create(title=SPEAKING_TITLE, section='Speaking',
+                                   duration_seconds=total + 180, passage=SPEAKING_PASSAGE)
+        for i, (part, prompt, points, seconds) in enumerate(SPEAKING_ITEMS, 1):
+            Question.objects.create(exam=exam, position=i, part=part, prompt=prompt, choices=points,
+                                    accepted_answers=[], evidence='', explanation='',
+                                    skill_tag=f'Part {part}' + (' · cue card' if part == 2 else ''))
+        exam.published = True
+        exam.save()
+        self.stdout.write(self.style.SUCCESS(
+            'Speaking: yaratildi va nashr qilindi (Part 1 — 4 savol, Part 2 — cue card, Part 3 — 3 savol).\n'
+            '  Savol audiolari yuklanmagan, shuning uchun brauzer savollarni ovoz bilan o‘qiydi. '
+            'Haqiqiy ovoz uchun admin panelda har bir savolga yozuv yuklang.'))

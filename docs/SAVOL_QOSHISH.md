@@ -141,6 +141,78 @@ Agar test allaqachon nashr qilingan bo'lsa, audio maydoni qulflanadi. «Yangi ve
 
 ---
 
+## Speaking testi
+
+Speaking boshqa bo'limlardan farq qiladi: u **suhbat emas, ssenariy**. Imtihon oluvchi belgilangan savollarni beradi, talaba javob beradi, hech qanday maslahat yoki baho ko'rsatilmaydi.
+
+Shuning uchun har bir savolga **qism** belgilanadi:
+
+| Qism | Nima bo'ladi | Vaqt (har savolga) |
+|---|---|---|
+| **Part 1** | Tanishuv savollari: uy, ish, o'qish, qiziqishlar | 60 soniya |
+| **Part 2** | Cue card — bitta mavzu, oldin 1 daqiqa tayyorgarlik | 120 soniya |
+| **Part 3** | Part 2 mavzusiga bog'liq mavhum savollar | 90 soniya |
+
+Vaqtlar qismdan kelib chiqib avtomatik belgilanadi — alohida kiritish shart emas.
+
+### Qoidalar
+
+Test nashr qilinishi uchun quyidagilar shart:
+
+- kamida bitta **Part 1** savoli
+- aynan bitta **Part 2** cue card
+- kamida bitta **Part 3** savoli
+- har bir savolda qism belgilangan bo'lishi (`—` qolmasligi)
+
+### Part 2 cue card
+
+Cue card uchun:
+
+- **Savol matni** — mavzu sarlavhasi, masalan `Describe a skill you would like to learn.`
+- **Variantlar** maydoni — cue card bandlari, har biri alohida qatorda:
+
+```
+What the skill is
+Why you want to learn it
+How you would go about learning it
+And explain how this skill would change your daily life
+```
+
+Talaba avval 1 daqiqa tayyorgarlik ekranini ko'radi (cue card va taymer), keyin savol o'qiladi va yozuv boshlanadi.
+
+### Savol audiosi
+
+Har bir savolga **o'z audio faylini** yuklashingiz mumkin — imtihon oluvchining o'sha savolni o'qigan yozuvi.
+
+Audio yuklamasangiz, **brauzer savol matnini ovoz bilan o'qiydi**. Bu ishlaydi, lekin ovoz sifati qurilmaga bog'liq va qurilmada inglizcha ovoz bo'lmasligi mumkin — u holda savol faqat ekranda ko'rinadi.
+
+Haqiqiy imtihon tajribasi uchun har bir savolga yozuv yuklashni tavsiya qilamiz.
+
+### Javob kaliti
+
+Speaking uchun **To'g'ri javob(lar)** maydoni bo'sh qoldiriladi. Javoblar yozib olinadi va AI baholaydi.
+
+### Baholash
+
+Talaba barcha savollarga javob bergach, yozuvlar serverga yuboriladi va test `Baholash kutilmoqda` holatiga o'tadi.
+
+Baho chiqishi uchun `GEMINI_API_KEY` va `AI_ENABLED=1` kerak, hamda baholash ishchisi ishlab turishi kerak:
+
+```bash
+cd backend
+.venv/bin/python manage.py assess_pending --watch
+```
+
+Kalit bo'lmasa, yozuvlar saqlanib turadi va kalit ulangach baholanadi — xuddi Writing kabi.
+
+### Erkin suhbat mashqi — alohida narsa
+
+`/dashboard/speaking` sahifasidagi **ovozli mashq** — bu imtihon emas. U Gemini Live orqali erkin suhbatlashadi, qo'shimcha savollar beradi va imtihon qoidalariga bo'ysunmaydi. U alohida imkoniyat sifatida qoladi va `VOICE_PRACTICE_ENABLED=1` hamda jonli kalit talab qiladi.
+
+Imtihon rejimi uchun Live kerak emas.
+
+---
+
 ## Ko'p savolni birdan yuklash
 
 Bitta-bitta kiritish uzoq bo'lsa, JSON fayldan import qiling:

@@ -111,14 +111,23 @@ def attempts(request):
         get_user_model().objects.select_for_update().get(pk=request.user.pk)
         exam=Exam.objects.filter(pk=exam_id,published=True).first()
         if not exam:return error('Test topilmadi.',404)
-        if exam.section=='Speaking':return error('Ovozli suhbat xizmati hali ulanmagan.',503)
         existing=Attempt.objects.filter(user=request.user,exam=exam,state='in_progress').first()
         if existing:
             if existing.deadline<=timezone.now():finish_attempt(existing)
             return JsonResponse(payload(existing))
         try:validate_exam(exam)
         except ValidationError as exc:return error(' '.join(exc.messages),409)
-        qs=list(exam.questions.values('position','prompt','choices','accepted_answers','evidence','explanation','skill_tag'))
+        fields=['position','part','prompt','choices','accepted_answers','evidence','explanation','skill_tag']
+        # Speaking needs the per-question recording; fetch it in the SAME query so
+        # the write transaction stays short (SQLite locks for its whole duration).
+        if exam.section=='Speaking':fields.append('audio_file')
+        qs=list(exam.questions.values(*fields))
+        if exam.section=='Speaking':
+            # The runner plays the examiner's recording when there is one and reads
+            # the prompt aloud when there is not; the snapshot carries whichever.
+            for row in qs:
+                name=row.pop('audio_file')
+                row['audio_url']=(settings.MEDIA_URL+name) if name else ''
         if exam.section=='Writing' and d.get('accept_pending_assessment') is not True:return error('Writing bahosi AI ulanmaguncha kutilishini tasdiqlang.',409)
         profile,_=Profile.objects.get_or_create(user=request.user)
         if not settings.EXAMS_OPEN_ACCESS:
@@ -225,18 +234,34 @@ def speaking_submit(request):
     import base64,uuid
     from .voice import access
     from .models import SpeakingRecording
-    state=access(request.user)
-    if not state['allowed']:return error('VOICE_PRACTICE_DISABLED',403)
-    if not state['configured']:return error('AI_NOT_CONFIGURED',503)
     try: identifier=uuid.UUID(request.POST.get('id',''))
     except (ValueError,TypeError):return error('Submission ID required.')
     previous=Attempt.objects.filter(pk=identifier,user=request.user).first()
-    if previous:return JsonResponse(payload(previous))
+    # Someone else's id must never fall through to the practice path, where it
+    # would be judged by transcript rules before ownership is ever checked.
+    if not previous and Attempt.objects.filter(pk=identifier).exists():
+        return error('Submission ID unavailable.',409)
+    # Already submitted, exam or practice: hand back what is stored, unchanged.
+    if previous and previous.state!='in_progress':return JsonResponse(payload(previous))
+    # Only an exam attempt is ever in progress here; practice attempts are created
+    # already awaiting assessment, so in-progress is itself the discriminator.
+    exam_attempt=previous
+    if not exam_attempt:
+        # Practice is a separate, staff/flag-gated feature and needs a live key.
+        # An exam recording is accepted whatever the key does: entitlement already
+        # admitted the candidate, and the job waits like a Writing submission does.
+        state=access(request.user)
+        if not state['allowed']:return error('VOICE_PRACTICE_DISABLED',403)
+        if not state['configured']:return error('AI_NOT_CONFIGURED',503)
     if request.POST.get('consent')!='yes':return error('Audio assessment consent required.')
     transcript=request.POST.get('transcript','').strip()
-    if not 20<=len(transcript)<=60000:return error('Kamida bitta mazmunli javob yozib oling. / Record a meaningful answer.')
+    # Exam mode has no live transcription; the assessment transcribes the audio itself.
+    if exam_attempt:
+        if len(transcript)>60000:return error('Transcript too long.')
+    elif not 20<=len(transcript)<=60000:return error('Kamida bitta mazmunli javob yozib oling. / Record a meaningful answer.')
     files=request.FILES.getlist('audio')
-    if not 1<=len(files)<=3 or sum(f.size for f in files)>10*1024*1024:return error('Audio limit: 3 segments / 10 MB.')
+    limit=12 if exam_attempt else 3
+    if not 1<=len(files)<=limit or sum(f.size for f in files)>20*1024*1024:return error(f'Audio limit: {limit} segments / 20 MB.')
     segments=[]
     for f in files:
         mime=f.content_type.split(';')[0]
@@ -245,6 +270,17 @@ def speaking_submit(request):
         if not valid or len(raw)<100:return error('Unsupported or empty audio.')
         segments.append({'mime':mime,'data':base64.b64encode(raw).decode()})
     if throttle('speaking-submit:'+str(request.user.pk)):return error('AI_RATE_LIMIT',429)
+    if exam_attempt:
+        with transaction.atomic():
+            a=Attempt.objects.select_for_update().get(pk=identifier)
+            if a.user_id!=request.user.pk:return error('Submission ID unavailable.',409)
+            if a.state!='in_progress':return JsonResponse(payload(a))
+            a.answers={**a.answers,'1':transcript}
+            a.state='awaiting_assessment';a.submitted_at=timezone.now()
+            a.save(update_fields=['answers','state','submitted_at'])
+            SpeakingRecording.objects.update_or_create(attempt=a,defaults={'segments':segments})
+            AssessmentJob.objects.get_or_create(attempt=a)
+        return JsonResponse(payload(a),status=201)
     with transaction.atomic():
         get_user_model().objects.select_for_update().get(pk=request.user.pk)
         previous=Attempt.objects.filter(pk=identifier).first()

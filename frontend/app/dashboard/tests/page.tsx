@@ -80,16 +80,16 @@ export default function TestsPage() {
             const entries = exams.filter((e) => e.section === name);
             if (entries.length) {
               return entries.map((exam) => {
-                const locked = (!openAccess && !free && !exam.has_access) || name === 'Speaking';
+                const locked = !openAccess && !free && !exam.has_access;
                 return (
                   <section className={'panel exam-card skill-' + name.toLowerCase()} key={exam.id}>
                     <div className="exam-card-top">
                       <span className="skill-icon"><Icon size={24} /></span>
                       <span className="access-badge">
-                        {openAccess && name !== 'Speaking' ? (
+                        {openAccess ? (
                           say('Sinov uchun ochiq', 'Open for testing', 'Открыто для тестирования')
                         ) : locked ? (
-                          <><LockKeyhole size={13} />{name === 'Speaking' ? say('Ovozli mashq', 'Voice practice', 'Голосовая практика') : say('Pullik', 'Paid', 'Платно')}</>
+                          <><LockKeyhole size={13} />{say('Pullik', 'Paid', 'Платно')}</>
                         ) : free ? t.free : say('Kirish mavjud', 'Access granted', 'Доступ открыт')}
                       </span>
                     </div>
@@ -97,18 +97,24 @@ export default function TestsPage() {
                     <h2>{exam.title}</h2>
                     {name === 'Speaking' && (
                       <p className="availability-note">
-                        {say('Ovozli imtihon tayyorlanmoqda. Ochilish sanasi hali belgilanmagan.', 'The voice exam is in development. A launch date has not been set.', 'Голосовой экзамен в разработке. Дата запуска ещё не определена.')}
+                        {say('Ssenariyli suhbat: Part 1, cue card va Part 3. Mikrofon kerak bo‘ladi.', 'A scripted interview: Part 1, a cue card and Part 3. A microphone is required.', 'Структурированное интервью: Part 1, карточка и Part 3. Нужен микрофон.')}
                       </p>
                     )}
                     <p>{exam.question_count} {t.questions} · {Math.round(exam.duration_seconds / 60)} {t.minutes}</p>
                     <button
                       className={locked ? 'secondary' : 'primary'}
                       disabled={busy}
-                      onClick={() => (name === 'Speaking' ? router.push('/dashboard/speaking') : void start(exam))}
+                      onClick={() => void start(exam)}
                     >
                       {locked ? <LockKeyhole size={16} /> : <ArrowRight size={16} />}{' '}
-                      {name === 'Speaking' ? say('Ovozli mashq', 'Voice practice', 'Голосовая практика') : locked ? say('Mavjudlik holati', 'Availability details', 'Статус доступа') : t.start}
+                      {locked ? say('Mavjudlik holati', 'Availability details', 'Статус доступа') : t.start}
                     </button>
+                    {name === 'Speaking' && !locked && (
+                      <Link className="text-button" href="/dashboard/speaking">
+                        {say('Yoki erkin ovozli mashq', 'Or free voice practice', 'Или свободная голосовая практика')}
+                        <ArrowRight size={16} />
+                      </Link>
+                    )}
                   </section>
                 );
               });

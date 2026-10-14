@@ -35,14 +35,26 @@ class Exam(models.Model):
 class Question(models.Model):
     exam=models.ForeignKey(Exam,on_delete=models.CASCADE,related_name='questions')
     position=models.PositiveIntegerField()
+    # Speaking only: which part of the interview this belongs to (1, 2 or 3).
+    # 0 means the section is not part-structured (Reading, Listening, Writing).
+    part=models.PositiveSmallIntegerField(default=0,choices=[(0,'—'),(1,'Part 1'),(2,'Part 2 (cue card)'),(3,'Part 3')],
+        help_text='Faqat Speaking uchun. 1 — tanishuv savollari, 2 — cue card, 3 — mavhum muhokama.')
     prompt=models.TextField()
+    # Speaking: the examiner's recorded voice for this question. When empty the
+    # browser reads the prompt aloud instead, so a bank is usable before audio exists.
+    audio_file=models.FileField(upload_to='question-audio/',blank=True,validators=[validate_exam_audio],
+        help_text='Ixtiyoriy. Imtihon oluvchining shu savolni o‘qigan yozuvi. Bo‘sh bo‘lsa, brauzer matnni ovoz bilan o‘qiydi.')
+    # Speaking Part 2 reuses `choices` as the cue card's bullet points.
     choices=models.JSONField(default=list,blank=True)
     accepted_answers=models.JSONField(default=list,blank=True)
     evidence=models.TextField(blank=True)
     explanation=models.TextField(blank=True)
     skill_tag=models.CharField(max_length=100,blank=True)
+    def audio_source(self):
+        """The URL the browser should play, or '' when the prompt must be read aloud."""
+        return self.audio_file.url if self.audio_file else ''
     class Meta:
-        ordering=['position']
+        ordering=['part','position']
         constraints=[models.UniqueConstraint(fields=['exam','position'],name='unique_question_position')]
 class Profile(models.Model):
     user=models.OneToOneField(settings.AUTH_USER_MODEL,on_delete=models.CASCADE)

@@ -55,7 +55,8 @@ class QuestionForm(forms.ModelForm):
         widget=LinesWidget(attrs={'rows': 4, 'placeholder': 'TRUE\nFALSE\nNOT GIVEN'}),
         label='Variantlar',
         help_text='Har bir variant — alohida qator. Bo‘sh qoldirsangiz, savol ochiq javobli bo‘ladi '
-                  '(talaba matn yozadi).',
+                  '(talaba matn yozadi). Speaking Part 2 da bu maydon cue card bandlari bo‘ladi: '
+                  'har bir band alohida qatorda.',
     )
     accepted_answers = LinesField(
         required=False,
@@ -63,22 +64,29 @@ class QuestionForm(forms.ModelForm):
         label='To‘g‘ri javob(lar)',
         help_text='Har bir to‘g‘ri javob — alohida qator. Variantlar bo‘lsa, javob aynan ulardan biri '
                   'bo‘lishi shart. Ochiq javobda bir nechta qabul qilinadigan yozilish berishingiz mumkin '
-                  '(masalan: colour va color). Reading va Listening uchun majburiy.',
+                  '(masalan: colour va color). Reading va Listening uchun majburiy. '
+                  'Writing va Speaking uchun bo‘sh qoldiring — ularni AI baholaydi.',
     )
 
     class Meta:
         model = Question
-        fields = ['position', 'prompt', 'choices', 'accepted_answers', 'skill_tag', 'evidence', 'explanation']
+        fields = ['part', 'position', 'prompt', 'audio_file', 'choices', 'accepted_answers',
+                  'skill_tag', 'evidence', 'explanation']
         labels = {
+            'part': 'Qism (faqat Speaking)',
             'position': 'Tartib raqami',
             'prompt': 'Savol matni',
+            'audio_file': 'Savol audiosi (faqat Speaking)',
             'skill_tag': 'Ko‘nikma turi',
             'evidence': 'Matndagi dalil',
             'explanation': 'Izoh (talabaga)',
         }
         help_texts = {
+            'part': 'Speaking testida har bir savolga qism belgilang. Boshqa bo‘limlarda «—» qoldiring.',
             'position': 'Savollar shu raqam bo‘yicha tartiblanadi. 1 dan boshlang, takrorlanmasin.',
-            'prompt': 'Talaba ko‘radigan savol. Ingliz tilida yozing.',
+            'prompt': 'Talaba ko‘radigan savol. Ingliz tilida yozing. Speaking Part 2 da bu — cue card sarlavhasi.',
+            'audio_file': 'Imtihon oluvchining shu savolni o‘qigan yozuvi. '
+                          'Bo‘sh qoldirsangiz, brauzer matnni ovoz bilan o‘qiydi.',
             'skill_tag': 'Masalan: True / False / Not Given, Matching headings, Multiple choice. '
                          'Natijalar sahifasida zaif tomonlarni guruhlash uchun ishlatiladi.',
             'evidence': 'Matn yoki transkriptdan AYNAN ko‘chirilgan parcha. Natijada talabaga shu ko‘rsatiladi.',
