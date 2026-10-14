@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { AudioLines, BarChart3, BookOpen, CalendarDays, CreditCard, Home, LogOut, UserRound, ArrowRight } from 'lucide-react';
+import { AudioLines, BarChart3, BookOpen, CalendarDays, CreditCard, Home, LineChart, LogOut, Mic, UserRound, ArrowRight } from 'lucide-react';
 import { useProduct } from './product-context';
 import ThemeToggle from './theme-toggle';
 import type { Language } from './api';
@@ -16,7 +16,9 @@ export default function SiteHeader() {
     ['/dashboard', t.dashboard, Home],
     ['/dashboard/tests', t.tests, BookOpen],
     ['/dashboard/results', t.results, BarChart3],
-    ['/dashboard/analytics', say('Analitika', 'Analytics', 'Аналитика'), BarChart3],
+    // Analytics had the same icon as Results; two sections must not share one mark.
+    ['/dashboard/analytics', say('Analitika', 'Analytics', 'Аналитика'), LineChart],
+    ['/dashboard/speaking', 'Speaking', Mic],
     ['/dashboard/plan', t.plan, CalendarDays],
     ['/dashboard/payments', say('To‘lovlar', 'Payments', 'Оплата'), CreditCard],
   ] as const;
