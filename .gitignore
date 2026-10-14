@@ -22,3 +22,6 @@ node_modules/
 frontend/test-results/
 frontend/playwright-report/
 frontend/blob-report/
+
+# Yuklangan imtihon audiolari (foydalanuvchi kontenti)
+backend/media/

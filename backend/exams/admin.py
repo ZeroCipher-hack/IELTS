@@ -1,12 +1,17 @@
 from django.contrib import admin,messages
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils.html import format_html
+from .admin_forms import ExamForm,QuestionForm
 from .models import Exam,Question,Attempt,Profile,Entitlement,AssessmentJob
 from .services import validate_exam
 
 class Questions(admin.StackedInline):
     model=Question
-    extra=0
+    form=QuestionForm
+    extra=1
+    verbose_name='Savol'
+    verbose_name_plural='Savollar — har bir savol uchun bitta blok to\u2018ldiring'
     fields=['position','prompt','choices','accepted_answers','skill_tag','evidence','explanation']
     def has_change_permission(self,request,obj=None):return not obj or not obj.published
     def has_add_permission(self,request,obj=None):return not obj or not obj.published
@@ -14,13 +19,34 @@ class Questions(admin.StackedInline):
 
 @admin.register(Exam)
 class ExamAdmin(admin.ModelAdmin):
-    list_display=['title','section','version','published','duration_seconds']
+    form=ExamForm
+    list_display=['title','section','version','published','duration_seconds','audio_state','question_count']
     list_filter=['section','published']
     search_fields=['title']
     inlines=[Questions]
     actions=['publish_checked','duplicate_draft']
+    fieldsets=[
+        ('1. Test haqida',{'fields':['title','section','duration_seconds'],
+            'description':'Avval bo\u2018limni tanlang \u2014 keyingi maydonlardan qaysi biri kerakligi shunga bog\u2018liq.'}),
+        ('2. Material',{'fields':['passage','audio_file','audio_url'],
+            'description':'Reading \u2192 matn majburiy. Listening \u2192 audio fayl yuklang (yoki HTTPS havola), '
+                          'transkriptni matn maydoniga qo\u2018ying. Writing \u2192 matn maydoni ixtiyoriy, '
+                          'topshiriqlarni quyidagi savollar bo\u2018limiga yozing.'}),
+        ('3. Holat',{'fields':['published'],
+            'description':'Bu yerdan belgilamang. Pastdagi ro\u2018yxatdan testni tanlab, '
+                          '\u00abTekshirish va nashr qilish\u00bb amalini ishlating \u2014 u avval xatolarni tekshiradi. '
+                          'Nashr qilingandan keyin test o\u2018zgarmas bo\u2018lib qoladi.'}),
+    ]
+    @admin.display(description='Audio')
+    def audio_state(self,obj):
+        if obj.section!='Listening':return '\u2014'
+        if obj.audio_file:return format_html('<b style="color:#1b7f3b">fayl</b>')
+        if obj.audio_url:return 'tashqi havola'
+        return format_html('<b style="color:#b3200f">YO\u2018Q</b>')
+    @admin.display(description='Savollar')
+    def question_count(self,obj):return obj.questions.count()
     def get_readonly_fields(self,request,obj=None):
-        return ['title','section','version','duration_seconds','passage','audio_url','published'] if obj and obj.published else ['published']
+        return ['title','section','version','duration_seconds','passage','audio_file','audio_url','published'] if obj and obj.published else ['published']
     def has_delete_permission(self,request,obj=None):return not obj or not obj.published
     @admin.action(description='Tekshirish va nashr qilish')
     def publish_checked(self,request,queryset):

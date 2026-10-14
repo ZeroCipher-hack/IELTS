@@ -23,6 +23,10 @@ else:
 AUTH_PASSWORD_VALIDATORS=[{'NAME':'django.contrib.auth.password_validation.MinimumLengthValidator','OPTIONS':{'min_length':10}},{'NAME':'django.contrib.auth.password_validation.CommonPasswordValidator'},{'NAME':'django.contrib.auth.password_validation.NumericPasswordValidator'}]
 LANGUAGE_CODE='uz';TIME_ZONE='UTC';USE_I18N=True;USE_TZ=True
 STATIC_URL='static/';STATIC_ROOT=BASE_DIR/'staticfiles';DEFAULT_AUTO_FIELD='django.db.models.BigAutoField'
+# Uploaded exam audio. Served by Django in DEBUG and by the reverse proxy in production.
+MEDIA_URL='/media/';MEDIA_ROOT=Path(os.getenv('DJANGO_MEDIA_ROOT',BASE_DIR/'media'))
+EXAM_AUDIO_MAX_BYTES=int(os.getenv('EXAM_AUDIO_MAX_BYTES',str(40*1024*1024)))
+EXAM_AUDIO_EXTENSIONS=['mp3','m4a','aac','ogg','oga','opus','wav','webm']
 CSRF_TRUSTED_ORIGINS=os.getenv('CSRF_TRUSTED_ORIGINS','http://localhost:3000,http://127.0.0.1:3000').split(',')
 SESSION_COOKIE_HTTPONLY=True
 SESSION_COOKIE_SECURE=not DEBUG

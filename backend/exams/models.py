@@ -1,7 +1,18 @@
 import uuid
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
+
+def validate_exam_audio(f):
+    """Admin-facing guard. Keeps an unplayable or oversized upload out of the catalog."""
+    allowed=settings.EXAM_AUDIO_EXTENSIONS
+    name=getattr(f,'name','') or ''
+    if '.' not in name or name.rsplit('.',1)[1].lower() not in allowed:
+        raise ValidationError('Audio formati qo\u2018llab-quvvatlanmaydi. Ruxsat etilgan: '+', '.join(allowed)+'.')
+    size=getattr(f,'size',0) or 0
+    if size>settings.EXAM_AUDIO_MAX_BYTES:
+        raise ValidationError(f'Audio hajmi {settings.EXAM_AUDIO_MAX_BYTES//(1024*1024)} MB dan oshmasligi kerak.')
 class Exam(models.Model):
     title=models.CharField(max_length=180)
     section=models.CharField(max_length=16,choices=[(s,s) for s in ['Reading','Listening','Writing','Speaking']])
@@ -9,8 +20,17 @@ class Exam(models.Model):
     published=models.BooleanField(default=False)
     duration_seconds=models.PositiveIntegerField(default=600)
     passage=models.TextField(blank=True)
-    audio_url=models.URLField(blank=True)
+    # Listening audio comes from EITHER an uploaded file or an external HTTPS link.
+    # audio_file wins when both are set; audio_source() is the single resolver.
+    audio_file=models.FileField(upload_to='exam-audio/',blank=True,validators=[validate_exam_audio],
+        help_text='Audio faylni shu yerga yuklang (mp3, m4a, ogg, wav, webm; 40 MB gacha).')
+    audio_url=models.URLField(blank=True,
+        help_text='Fayl yuklamasangiz, tashqi HTTPS havolasini qo\u2018ying. Fayl yuklangan bo\u2018lsa, shu havola e\u2019tiborga olinmaydi.')
     # Only drafts can be edited; attempts additionally retain a complete snapshot.
+    def audio_source(self):
+        """The URL a student's browser should load. Empty when no audio is attached."""
+        if self.audio_file: return self.audio_file.url
+        return self.audio_url
     def __str__(self): return f'{self.title} · v{self.version}'
 class Question(models.Model):
     exam=models.ForeignKey(Exam,on_delete=models.CASCADE,related_name='questions')

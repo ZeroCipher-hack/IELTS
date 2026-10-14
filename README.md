@@ -54,4 +54,7 @@ pnpm build
 - backend/: Django API, admin, models, migrations, seed command and tests.
 - docs/: architecture, design and integration checklist.
 
+## Test va savol qo‘shish
+Admin panel orqali test qo‘shish, Listening audiosini yuklash va JSON import qilish bo‘yicha qadamba-qadam qo‘llanma: [docs/SAVOL_QOSHISH.md](docs/SAVOL_QOSHISH.md).
+
 Only original demonstration content belongs in this public repository. Do not commit real user records, paid answer keys, credentials or database files.
