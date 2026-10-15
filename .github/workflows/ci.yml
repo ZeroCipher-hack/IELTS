@@ -129,6 +129,7 @@ jobs:
         run: |
           python manage.py migrate --noinput
           python manage.py seed_demo
+          python manage.py seed_papers
           # Listening seeds as a draft (it needs a real recording). The e2e
           # suite needs all four sections published to exercise a full sitting,
           # so the fixture command supplies placeholder audio. DEBUG only.

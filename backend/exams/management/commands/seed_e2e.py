@@ -39,7 +39,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if not settings.DEBUG:
             raise CommandError('seed_e2e is a test fixture and refuses to run with DEBUG off.')
-        exam = Exam.objects.filter(section='Listening', published=False).order_by('-id').first()
+        # Oldest first: the 40-question paper seeded last stays a draft unless
+        # it is the only one, so the e2e suite keeps exercising a short paper's
+        # "no band" path as well as a full sitting.
+        exam = Exam.objects.filter(section='Listening', published=False).order_by('id').first()
         if exam is None:
             self.stdout.write('No draft Listening exam to publish.')
             return

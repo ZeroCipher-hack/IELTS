@@ -61,11 +61,8 @@ class ExamAdmin(admin.ModelAdmin):
             except ValidationError as exc:self.message_user(request,f'{exam.title}: '+ ' '.join(exc.messages),messages.ERROR)
     @admin.action(description='Yangi versiyaga nusxalash (qoralama)')
     def duplicate_draft(self,request,queryset):
-        with transaction.atomic():
-            for exam in queryset:
-                questions=list(exam.questions.all())
-                exam.pk=None;exam.published=False;exam.version+=1;exam.save()
-                for q in questions:q.pk=None;q.exam=exam;q.save()
+        from .services import duplicate_exam
+        for exam in queryset:duplicate_exam(exam)
         self.message_user(request,'Yangi qoralamalar yaratildi.',messages.SUCCESS)
 
 @admin.register(Attempt)

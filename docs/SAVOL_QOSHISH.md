@@ -247,6 +247,40 @@ Yaratilgandan keyin admin panelda «Tekshirish va nashr qilish» amalini ishlati
 
 ---
 
+## 40 savollik testlar (band chiqishi uchun)
+
+Loyihada ikkita to'liq uzunlikdagi ish bor. Ularni bir marta yaratib oling:
+
+```bash
+cd backend
+.venv/bin/python manage.py seed_papers
+```
+
+| Ish | Holat |
+|---|---|
+| `Academic Reading — Movement, materials and memory` | 40 savol, **darhol nashr qilinadi** |
+| `Listening — Riverside: services, work and study` | 40 savol + to'liq transkript, **qoralama** |
+
+Listening'ni tugatish uchun audio kerak:
+
+```bash
+.venv/bin/python manage.py generate_audio --section Listening --publish
+```
+
+Buyruq audioning **tezligini ham aytadi**. IELTS Listening ~140–150 so'z/daqiqa. Agar «JUDA TEZ» deb chiqsa, eshitib ko'ring va kerak bo'lsa `--replace` bilan qayta yarating — juda tez audio talabani Listening'da emas, tezlikda yiqitadi.
+
+### Nashr qilingan testga audio qo'shish
+
+Nashr qilingan test o'zgarmas. Buyruq uni **nusxalab**, nusxaga audio qo'yadi va kerak bo'lsa nashr qiladi:
+
+```bash
+.venv/bin/python manage.py generate_audio --section Speaking --duplicate --publish
+```
+
+Eski versiya joyida qoladi va ishlayotgan urinishlar buzilmaydi. To'liq imtihon har doim eng yangi nashr qilingan testni oladi, shuning uchun yangi versiya avtomatik ishlatiladi.
+
+---
+
 ## To'liq imtihon (IELTS Academic)
 
 Talaba «Imtihonlar» sahifasidan **To'liq imtihonni boshlash** tugmasini bosadi. To'rtta bo'lim ketma-ket topshiriladi: Listening → Reading → Writing → Speaking.

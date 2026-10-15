@@ -39,6 +39,30 @@ def validate_exam(exam):
 def normal(value): return ' '.join(value.strip().casefold().split())
 
 
+def duplicate_exam(exam):
+    """Return an unsaved-to-the-caller draft copy of `exam`, questions included.
+
+    A published exam is immutable, so every correction and every added
+    recording goes through a new version. Uploaded files are referenced by
+    name, not re-uploaded: the copy points at the same stored audio until it
+    is given its own.
+    """
+    from django.db import transaction
+    from .models import Exam
+    with transaction.atomic():
+        source = Exam.objects.get(pk=exam.pk)
+        questions = list(source.questions.all())
+        source.pk = None
+        source.published = False
+        source.version += 1
+        source.save()
+        for question in questions:
+            question.pk = None
+            question.exam = source
+            question.save()
+    return source
+
+
 def finish_attempt(a):
     """Call under an attempt row lock. Repeated delivery is safe."""
     if a.state!='in_progress': return a

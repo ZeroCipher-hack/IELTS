@@ -45,7 +45,10 @@ test('a full sitting runs all four sections in order', async ({ page }) => {
   // The sitting advanced: Listening is done, Reading is now the live one.
   await expect(cards.nth(0).locator('.access-badge')).toContainText(/Tekshirildi/);
   await expect(cards.nth(1).getByRole('button')).toBeVisible();
-  await expect(cards.nth(0).getByText(/Band jadvali yo‘q/)).toBeVisible();
+  // A finished section shows its score block. Whether that is a band or a raw
+  // score depends on the paper's length, which the backend tests pin down; the
+  // UI assertion must not depend on which paper happens to be newest.
+  await expect(cards.nth(0).locator('.stage-band')).toBeVisible();
 
   // Reading.
   await cards.nth(1).getByRole('button').click();

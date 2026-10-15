@@ -145,3 +145,106 @@ class GenerateAudioCommandTests(TestCase):
     def test_without_a_key_it_refuses_instead_of_half_working(self):
         with self.assertRaises(CommandError):
             self.run_command()
+
+
+@override_settings(MEDIA_ROOT=MEDIA, AI_ENABLED=True, GEMINI_API_KEY='k')
+class PublishedExamAudioTests(TestCase):
+    """Adding audio to a live exam goes through a new version, never in place."""
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def speaking(self, published=True):
+        exam = Exam.objects.create(title='S', section='Speaking', duration_seconds=900,
+                                   passage='Guidance.')
+        Question.objects.create(exam=exam, position=1, part=1, prompt='Where do you live?',
+                                accepted_answers=[])
+        Question.objects.create(exam=exam, position=2, part=2, prompt='Describe a skill.',
+                                choices=['What it is'], accepted_answers=[])
+        Question.objects.create(exam=exam, position=3, part=3, prompt='Why learn skills?',
+                                accepted_answers=[])
+        exam.published = published
+        exam.save()
+        return exam
+
+    def run_command(self, **kwargs):
+        out = io.StringIO()
+        call_command('generate_audio', stdout=out, stderr=out, **kwargs)
+        return out.getvalue()
+
+    def test_duplicate_leaves_the_live_exam_untouched(self):
+        live = self.speaking()
+        with patch('exams.management.commands.generate_audio.speak', return_value=b'RIFFfake'):
+            self.run_command(duplicate=True)
+        live.refresh_from_db()
+        self.assertTrue(live.published)
+        self.assertFalse(any(q.audio_file for q in live.questions.all()),
+                         'the published exam must not gain audio in place')
+        copy = Exam.objects.exclude(pk=live.pk).get()
+        self.assertFalse(copy.published)
+        self.assertEqual(copy.version, live.version + 1)
+        self.assertEqual(copy.questions.count(), 3)
+        self.assertTrue(all(q.audio_file for q in copy.questions.all()))
+
+    def test_publish_makes_the_new_version_the_live_one(self):
+        live = self.speaking()
+        with patch('exams.management.commands.generate_audio.speak', return_value=b'RIFFfake'):
+            output = self.run_command(duplicate=True, publish=True)
+        self.assertIn('nashr qilindi', output)
+        newest = Exam.objects.filter(section='Speaking', published=True).order_by('-id').first()
+        self.assertNotEqual(newest.pk, live.pk)
+        self.assertTrue(all(q.audio_file for q in newest.questions.all()))
+
+    def test_an_incomplete_draft_is_not_published(self):
+        exam = Exam.objects.create(title='S', section='Speaking', duration_seconds=900)
+        Question.objects.create(exam=exam, position=1, part=1, prompt='Only a Part 1.',
+                                accepted_answers=[])
+        with patch('exams.management.commands.generate_audio.speak', return_value=b'RIFFfake'):
+            output = self.run_command(publish=True)
+        exam.refresh_from_db()
+        self.assertFalse(exam.published)
+        self.assertIn('nashr qilinmadi', output)
+
+    def test_without_duplicate_a_published_exam_is_skipped(self):
+        live = self.speaking()
+        with patch('exams.management.commands.generate_audio.speak') as spoke:
+            self.run_command(exam=live.id)
+        spoke.assert_not_called()
+        self.assertEqual(Exam.objects.count(), 1, 'no copy may be made unless asked for')
+
+
+@override_settings(MEDIA_ROOT=MEDIA, AI_ENABLED=True, GEMINI_API_KEY='k')
+class PaceReportTests(TestCase):
+    """Reading speed is reported, because a recording that races is unusable."""
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def listening(self, words):
+        exam = Exam.objects.create(title='L', section='Listening', duration_seconds=900,
+                                   passage=' '.join(['word'] * words))
+        Question.objects.create(exam=exam, position=1, prompt='Q', accepted_answers=['yes'])
+        return exam
+
+    def run_with(self, words, seconds):
+        from exams.tts import SAMPLE_RATE
+        audio = b'R' * (44 + SAMPLE_RATE * 2 * seconds)
+        self.listening(words)
+        out = io.StringIO()
+        with patch('exams.management.commands.generate_audio.speak', return_value=audio):
+            call_command('generate_audio', stdout=out, stderr=out)
+        return out.getvalue()
+
+    def test_an_exam_paced_recording_passes(self):
+        output = self.run_with(words=140, seconds=60)
+        self.assertIn('140 so‘z/daqiqa', output)
+        self.assertIn('IELTS tezligiga yaqin', output)
+
+    def test_a_racing_recording_is_called_out(self):
+        output = self.run_with(words=280, seconds=60)
+        self.assertIn('JUDA TEZ', output)
+        self.assertIn('--replace', output)
