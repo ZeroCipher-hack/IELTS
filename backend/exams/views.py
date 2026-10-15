@@ -10,7 +10,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
-from .models import Exam,Attempt,Profile,Entitlement,LoginThrottle,AssessmentJob
+from .models import Exam,Attempt,ExamSession,Profile,Entitlement,LoginThrottle,AssessmentJob
 from .services import finish_attempt,validate_exam
 from .profile_data import profile_fields
 
@@ -91,7 +91,7 @@ def catalog(request):
     return JsonResponse({'exams':[{**public_exam(e),'has_access':e.id in access} for e in exams],'free_attempt_available':True if settings.EXAMS_OPEN_ACCESS else not profile.free_attempt_used,'open_access':settings.EXAMS_OPEN_ACCESS,'payment_enabled':False,'ai_ready':configured()})
 def payload(a,include_questions=True):
     snap=a.snapshot
-    data={'id':str(a.id),'title':snap['title'],'section':snap['section'],'state':a.state,'deadline':a.deadline.isoformat(),'started_at':a.started_at.isoformat(),'answers':a.answers,'review_positions':a.review_positions,'result':a.result,'server_time':timezone.now().isoformat()}
+    data={'id':str(a.id),'title':snap['title'],'section':snap['section'],'state':a.state,'deadline':a.deadline.isoformat(),'started_at':a.started_at.isoformat(),'answers':a.answers,'review_positions':a.review_positions,'result':a.result,'server_time':timezone.now().isoformat(),'session_id':str(a.session_id) if a.session_id else ''}
     if a.state=='awaiting_assessment':
         from .gemini import configured
         job=AssessmentJob.objects.filter(attempt=a).first()
@@ -106,17 +106,31 @@ def attempts(request):
         with transaction.atomic():
             for expired in Attempt.objects.select_for_update().filter(user=request.user,state='in_progress',deadline__lte=timezone.now()):finish_attempt(expired)
         return JsonResponse({'attempts':[payload(a,False) for a in Attempt.objects.filter(user=request.user)[:100]]})
+    from .gemini import configured
+    from . import sessions as sitting
     d=body(request)
     try: exam_id=int(d.get('exam_id'))
     except (TypeError,ValueError):return error('Test tanlang.')
+    sitting_id=d.get('session_id') or ''
     with transaction.atomic():
         # User-row lock serializes free claim and entitlement consumption in PostgreSQL.
         get_user_model().objects.select_for_update().get(pk=request.user.pk)
         exam=Exam.objects.filter(pk=exam_id,published=True).first()
         if not exam:return error('Test topilmadi.',404)
+        full=None
+        if sitting_id:
+            full=ExamSession.objects.select_for_update().filter(pk=sitting_id,user=request.user,state='in_progress').first()
+            if not full:return error('To‘liq imtihon topilmadi yoki yakunlangan.',404)
+            rows=sitting.stages(full)
+            # A sitting is taken in order; letting a candidate skip ahead would
+            # make the sections they skipped unreachable afterwards.
+            slot=next((r for r in rows if r['section']==exam.section and r['exam_id']==exam.id),None)
+            if slot is None:return error('Bu test ushbu imtihon rejasida yo‘q.',409)
+            if slot['order']!=sitting.current_index(rows):return error('Bo‘limlar ketma-ket topshiriladi.',409)
         existing=Attempt.objects.filter(user=request.user,exam=exam,state='in_progress').first()
         if existing:
             if existing.deadline<=timezone.now():finish_attempt(existing)
+            elif full and existing.session_id is None:sitting.attach(full,existing,exam.section)
             return JsonResponse(payload(existing))
         try:validate_exam(exam)
         except ValidationError as exc:return error(' '.join(exc.messages),409)
@@ -131,7 +145,13 @@ def attempts(request):
             for row in qs:
                 name=row.pop('audio_file')
                 row['audio_url']=(settings.MEDIA_URL+name) if name else ''
-        if exam.section=='Writing' and d.get('accept_pending_assessment') is not True:return error('Writing bahosi AI ulanmaguncha kutilishini tasdiqlang.',409)
+        # Only ask the candidate to accept an ungraded attempt when it really
+        # would be ungraded. Demanding the acknowledgement with a working key
+        # teaches people to click past it.
+        # Writing only: a Speaking attempt is deliberately accepted whatever the
+        # key does, so a candidate who has already recorded is never refused.
+        if exam.section=='Writing' and not configured() and d.get('accept_pending_assessment') is not True:
+            return error('Baho AI ulanmaguncha kutilishini tasdiqlang.',409)
         profile,_=Profile.objects.get_or_create(user=request.user)
         if not settings.EXAMS_OPEN_ACCESS:
             if not profile.free_attempt_used:profile.free_attempt_used=True;profile.save()
@@ -141,6 +161,7 @@ def attempts(request):
                 entitlement.consumed=True;entitlement.save()
         snapshot={'title':exam.title,'section':exam.section,'version':exam.version,'passage':exam.passage,'audio_url':exam.audio_source(),'questions':qs,'feedback_language':profile.language}
         a=Attempt.objects.create(user=request.user,exam=exam,snapshot=snapshot,deadline=timezone.now()+timedelta(seconds=exam.duration_seconds))
+        if full and not sitting.attach(full,a,exam.section):return error('Bu bo‘lim allaqachon topshirilgan.',409)
     return JsonResponse(payload(a),status=201)
 def clean_answers(d,snapshot):
     values=d.get('answers')
@@ -299,3 +320,28 @@ def speaking_submit(request):
         SpeakingRecording.objects.create(attempt=a,segments=segments)
         AssessmentJob.objects.create(attempt=a)
     return JsonResponse(payload(a),status=201)
+
+@endpoint(['GET','POST'])
+def exam_sessions(request):
+    from . import sessions as sitting
+    if request.method=='GET':
+        rows=[sitting.report(sitting.refresh(s)) for s in ExamSession.objects.filter(user=request.user).prefetch_related('attempts')[:20]]
+        return JsonResponse({'sessions':rows})
+    plan,missing=sitting.build_plan()
+    if missing:
+        return error('To‘liq imtihon uchun har bir bo‘limdan kamida bitta nashr qilingan test kerak. Yetishmayapti: '+', '.join(missing),409)
+    with transaction.atomic():
+        running=ExamSession.objects.filter(user=request.user,state='in_progress').first()
+        if running:return JsonResponse(sitting.report(running),status=200)
+        full=ExamSession.objects.create(user=request.user,plan=plan)
+    return JsonResponse(sitting.report(full),status=201)
+
+@endpoint(['GET','DELETE'])
+def exam_session(request,pk):
+    from . import sessions as sitting
+    full=ExamSession.objects.filter(pk=pk,user=request.user).prefetch_related('attempts').first()
+    if not full:return error('To‘liq imtihon topilmadi.',404)
+    if request.method=='DELETE':
+        if full.state=='in_progress':full.state='abandoned';full.save(update_fields=['state'])
+        return JsonResponse(sitting.report(full))
+    return JsonResponse(sitting.report(sitting.refresh(full)))

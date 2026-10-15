@@ -72,10 +72,29 @@ class Entitlement(models.Model):
     consumed=models.BooleanField(default=False)
     reference=models.CharField(max_length=120,unique=True)
     # Entitlements are granted only by staff until a verified payment provider exists.
+class ExamSession(models.Model):
+    """One full IELTS Academic sitting: four sections taken in order.
+
+    The plan is fixed when the session starts, so republishing an exam cannot
+    change a sitting that is already under way. Per-section progress is not
+    stored here; it is read from the Attempt rows that point back, which keeps
+    a single source of truth for what a candidate has actually done.
+    """
+    ORDER=['Listening','Reading','Writing','Speaking']
+    id=models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
+    user=models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.CASCADE)
+    plan=models.JSONField(default=list)
+    state=models.CharField(max_length=24,default='in_progress')
+    started_at=models.DateTimeField(auto_now_add=True)
+    completed_at=models.DateTimeField(null=True,blank=True)
+    class Meta: ordering=['-started_at']
+
 class Attempt(models.Model):
     id=models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     user=models.ForeignKey(settings.AUTH_USER_MODEL,on_delete=models.CASCADE)
     exam=models.ForeignKey(Exam,on_delete=models.PROTECT)
+    session=models.ForeignKey(ExamSession,on_delete=models.SET_NULL,null=True,blank=True,related_name='attempts')
+    session_order=models.PositiveSmallIntegerField(default=0)
     snapshot=models.JSONField()
     answers=models.JSONField(default=dict)
     review_positions=models.JSONField(default=list,blank=True)

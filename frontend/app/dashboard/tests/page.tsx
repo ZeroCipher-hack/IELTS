@@ -50,8 +50,15 @@ export default function TestsPage() {
             <span className="badge"><Sparkles size={14} /> {say('SINOV REJIMI', 'TEST MODE', 'РЕЖИМ ТЕСТИРОВАНИЯ')}</span>
             <h2>{t.fullExam}</h2>
             <p>Listening · Reading · Writing · Speaking</p>
-            <p className="availability-note">{say('To‘liq imtihon oqimi hali tayyor emas. Hozir nashr qilingan bo‘lim testlarini alohida topshirib ko‘ring.', 'The full-exam flow is not ready yet. For now, try the published section tests individually.', 'Полный экзамен ещё не готов. Пока пройдите опубликованные тесты по разделам отдельно.')}</p>
+            <p className="availability-note">
+              {say('To‘rtta bo‘lim ketma-ket topshiriladi. Har bir bo‘limdan nashr qilingan eng yangi test olinadi.',
+                'Four sections taken in order, each using the newest published paper for that section.',
+                'Четыре раздела по порядку, в каждом — новейший опубликованный тест.')}
+            </p>
           </div>
+          <Link className="primary" href="/dashboard/full">
+            <ArrowRight size={18} />{say('To‘liq imtihonni boshlash', 'Start the full exam', 'Начать полный экзамен')}
+          </Link>
         </section>
       ) : (
         <section className="full-test premium-exam">

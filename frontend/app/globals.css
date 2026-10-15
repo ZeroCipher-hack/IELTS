@@ -292,6 +292,21 @@ html[data-theme="dark"] {
 .exam-card-top { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: var(--space-4); }
 .exam-card > .primary, .exam-card > .secondary { margin-top: auto; width: 100%; }
 .availability-note { font-size: 14px; font-weight: 600; color: var(--ink-muted); }
+/* ---------------------------------------------------- full sitting --- */
+.full-exam-stages {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6);
+  list-style: none; padding: 0; margin: 0;
+}
+.full-exam-stages > li { counter-increment: stage; }
+.full-exam-score { align-items: flex-start; text-align: left; }
+.band-figure {
+  display: block; font-size: 56px; line-height: 1; font-weight: 800;
+  color: var(--brand-text); margin-top: var(--space-3);
+}
+.stage-band { display: flex; align-items: baseline; gap: var(--space-3); margin-top: var(--space-2); }
+.stage-band strong { font-size: 26px; font-weight: 800; }
+.full-exam-stages .text-button { margin-top: auto; }
+
 .checkout-layout { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); }
 .checkout-summary, .checkout-status { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-6); }
 .checkout-price { font-size: 32px; font-weight: 800; }
@@ -525,7 +540,7 @@ html[data-theme="dark"] {
   .panel, .target-card { padding: var(--space-4); }
   .skill-action h3, .skill-action p, .skill-action strong, .skill-empty, .skill-action .skill-cta, .skill-action .skill-icon { padding-left: var(--space-4); padding-right: var(--space-4); }
   .dashboard-next, .dashboard-next > div, .plan-heading > div, .full-test { flex-direction: column; align-items: flex-start; }
-  .product-test-grid, .checkout-layout, .profile-layout, .product-plan, .report-summary, .skeleton-grid, .skeleton-grid.tests { grid-template-columns: 1fr; }
+  .product-test-grid, .full-exam-stages, .checkout-layout, .profile-layout, .product-plan, .report-summary, .skeleton-grid, .skeleton-grid.tests { grid-template-columns: 1fr; }
   .product-login { grid-template-columns: 1fr; padding: var(--space-8) var(--space-4); gap: var(--space-8); }
   .login-skills { display: none; }
   .history-table-head { display: none; }

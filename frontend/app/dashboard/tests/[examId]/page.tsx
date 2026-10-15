@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useProduct } from '@/components/product/product-context';
 import { api, type Attempt } from '@/components/product/api';
 import ExamRunner from '@/components/product/exam-runner';
@@ -10,6 +10,9 @@ import LoadingSkeleton from '@/components/product/loading-skeleton';
 export default function ExamPage() {
   const router = useRouter();
   const params = useParams<{ examId: string }>();
+  const sitting = useSearchParams().get('session') ?? '';
+  // A section taken inside a full sitting returns to the sitting, not the catalogue.
+  const home = sitting ? `/dashboard/full/${sitting}` : '/dashboard/tests';
   const { t, say, exams, history, free, load, setError } = useProduct();
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -40,7 +43,7 @@ export default function ExamPage() {
             router.replace(`/dashboard/payments?exam=${encodeURIComponent(exam.title)}`);
             return null;
           }
-          const a = await api<Attempt>('attempts/', 'POST', { exam_id: exam.id, accept_pending_assessment: exam.section === 'Writing' });
+          const a = await api<Attempt>('attempts/', 'POST', { exam_id: exam.id, accept_pending_assessment: exam.section === 'Writing', ...(sitting ? { session_id: sitting } : {}) });
           await load();
           return a;
         })(),
@@ -84,8 +87,8 @@ export default function ExamPage() {
           attempt={attempt}
           t={t}
           say={say}
-          onClose={() => { void load().catch(() => {}); router.push('/dashboard/tests'); }}
-          onComplete={(a) => router.push(`/dashboard/results/${a.id}`)}
+          onClose={() => { void load().catch(() => {}); router.push(home); }}
+          onComplete={(a) => router.push(sitting ? home : `/dashboard/results/${a.id}`)}
         />
       );
     }
@@ -93,12 +96,12 @@ export default function ExamPage() {
       <ExamRunner
         attempt={attempt}
         t={t}
-        onClose={() => { void load().catch(() => {}); router.push('/dashboard/tests'); }}
-        onComplete={(a) => router.push(`/dashboard/results/${a.id}`)}
+        onClose={() => { void load().catch(() => {}); router.push(home); }}
+        onComplete={(a) => router.push(sitting ? home : `/dashboard/results/${a.id}`)}
       />
     );
   }
   // Allaqachon topshirilgan/baholangan bo'lsa — natija sahifasiga yo'naltiramiz.
-  router.replace(`/dashboard/results/${attempt.id}`);
+  router.replace(sitting ? home : `/dashboard/results/${attempt.id}`);
   return <LoadingSkeleton label={t.loading} />;
 }
