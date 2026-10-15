@@ -196,10 +196,21 @@ Speaking uchun **To'g'ri javob(lar)** maydoni bo'sh qoldiriladi. Javoblar yozib 
 
 Talaba barcha savollarga javob bergach, yozuvlar serverga yuboriladi va test `Baholash kutilmoqda` holatiga o'tadi.
 
-Baho chiqishi uchun `GEMINI_API_KEY` va `AI_ENABLED=1` kerak, hamda baholash ishchisi ishlab turishi kerak:
+Baho chiqishi uchun `GEMINI_API_KEY` va `AI_ENABLED=1` kerak, hamda baholash ishchisi ishlab turishi kerak.
+
+Avval kalitni tekshiring — bu buyruq kalitning o‘zini ekranga chiqarmaydi:
 
 ```bash
 cd backend
+.venv/bin/python manage.py ai_check
+```
+
+Uchta qadam ketma-ket tekshiriladi: sozlama, kalit va model ro‘yxati, so‘ng haqiqiy so‘rov.
+Xato bo‘lsa, aynan qaysi bosqichda va nima sababdan ekani yoziladi.
+
+Hammasi joyida bo‘lsa, ishchini alohida terminalda ishga tushiring:
+
+```bash
 .venv/bin/python manage.py assess_pending --watch
 ```
 
