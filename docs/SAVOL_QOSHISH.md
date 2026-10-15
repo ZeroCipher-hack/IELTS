@@ -224,6 +224,52 @@ Imtihon rejimi uchun Live kerak emas.
 
 ---
 
+## Audioni avtomatik yaratish
+
+Listening yozuvini yoki imtihon oluvchining ovozini qo'lda yozib o'tirmasdan, Gemini orqali yaratish mumkin:
+
+```bash
+cd backend
+.venv/bin/python manage.py ai_check          # avval kalit ishlayotganini tekshiring
+.venv/bin/python manage.py generate_audio
+```
+
+Buyruq **faqat qoralama** testlarga tegadi:
+
+- **Speaking** — har bir savol uchun alohida yozuv. Part 2 cue card bandlari bilan birga o'qiladi.
+- **Listening** — «Matn / transkript» maydonidagi matn to'liq o'qib, audio fayl sifatida biriktiriladi.
+
+Mavjud audio o'chirilmaydi. Qayta yaratish uchun `--replace` qo'shing. Bitta testga cheklash: `--exam 7`.
+
+Yaratilgandan keyin admin panelda «Tekshirish va nashr qilish» amalini ishlating.
+
+> Ovoz sun'iy, lekin barqaror: brauzer ovoziga bog'liq emas va har bir qurilmada bir xil eshitiladi. Haqiqiy odam yozuvi baribir yaxshiroq — buni boshlang'ich material deb oling.
+
+---
+
+## To'liq imtihon (IELTS Academic)
+
+Talaba «Imtihonlar» sahifasidan **To'liq imtihonni boshlash** tugmasini bosadi. To'rtta bo'lim ketma-ket topshiriladi: Listening → Reading → Writing → Speaking.
+
+Har bir bo'lim uchun **o'sha bo'limdagi eng yangi nashr qilingan test** olinadi. Agar biror bo'limda nashr qilingan test bo'lmasa, imtihon umuman boshlanmaydi va qaysi bo'lim yetishmayotgani yoziladi.
+
+### Band qachon chiqadi
+
+| Bo'lim | Band manbai |
+|---|---|
+| Listening, Reading | Faqat test **aynan 40 savoldan** iborat bo'lsa, jadval bo'yicha taxmin |
+| Writing, Speaking | AI baholashi (kalit kerak) |
+
+**40 savoldan kam testda band chiqarilmaydi** — faqat to'g'ri javoblar soni ko'rsatiladi. Bu ataylab shunday: 6 ta savoldan 5 tasi to'g'ri bo'lsa, bu «band 8» degani emas, va noto'g'ri band talabani chalg'itadi.
+
+**Umumiy band to'rttala bo'limda ham band bo'lgandagina chiqadi.** Uchta band va bitta xom ball — umumiy band emas.
+
+Umumiy band to'rtta bandning o'rtachasi, IELTS qoidasi bo'yicha yaxlitlanadi (`.25` va `.75` yuqoriga).
+
+Barcha bandlar **taxminiy** — rasmiy IELTS natijasi emas, va shunday deb belgilanadi.
+
+---
+
 ## Ko'p savolni birdan yuklash
 
 Bitta-bitta kiritish uzoq bo'lsa, JSON fayldan import qiling:
