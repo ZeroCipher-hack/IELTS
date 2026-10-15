@@ -10,6 +10,7 @@ attempt already in progress holds its own snapshot of the audio URL. Existing
 audio is never overwritten unless --replace is given.
 """
 import re
+import time
 
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
@@ -23,6 +24,11 @@ from exams.tts import EXAMINER_VOICE, SAMPLE_RATE, speak
 # The transcript is stored for human reference and opens with a header line
 # plus Uzbek framing; neither belongs in the recording.
 TRANSCRIPT_NOISE = re.compile(r'^\s*(TRANSKRIPT|TRANSCRIPT)\s*:?\s*$', re.MULTILINE)
+
+# Free Gemini tiers count requests per minute, and the speech models are the
+# tightest of them. Spacing requests out costs minutes; not spacing them out
+# costs the whole run.
+DEFAULT_DELAY = 20.0
 
 # Pace is not a detail. A candidate who fails because the recording outran
 # them failed at nothing the exam is meant to measure. Official IELTS
@@ -57,6 +63,11 @@ class Command(BaseCommand):
                             help='Copy published exams to new drafts first, then give those drafts audio.')
         parser.add_argument('--publish', action='store_true',
                             help='Validate and publish each draft once its audio is complete.')
+        parser.add_argument('--delay', type=float, default=DEFAULT_DELAY,
+                            help='Seconds to wait between provider requests (free tiers are '
+                                 f'measured per minute). Default {DEFAULT_DELAY:g}.')
+        parser.add_argument('--retries', type=int, default=2,
+                            help='Times to wait out a rate limit before giving up on a recording.')
 
     def handle(self, *args, **options):
         if not configured():
@@ -80,6 +91,14 @@ class Command(BaseCommand):
                 if not source.published:
                     copies.append(source)
                     continue
+                existing = self.unfinished_copy(source)
+                if existing is not None:
+                    # Resume. Making a second copy on every run would strand
+                    # the audio already paid for -- which is exactly what a
+                    # rate limit makes you do: run the command again.
+                    self.stdout.write(f'#{source.id}: mavjud qoralama #{existing.id} davom ettirilmoqda')
+                    copies.append(existing)
+                    continue
                 copy = duplicate_exam(source)
                 self.stdout.write(f'#{source.id} nusxalandi -> #{copy.id} (qoralama)')
                 copies.append(copy)
@@ -90,6 +109,7 @@ class Command(BaseCommand):
                 'avval «Yangi versiyaga nusxalash (qoralama)» amalini ishlating.'))
             return
 
+        self.spoken_at = None
         made = failed = 0
         for exam in exams:
             if exam.published:
@@ -111,6 +131,22 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(
                 f'{failed} ta yozuv yaratilmadi. Yuqoridagi xato kodlariga qarang.'))
 
+    @staticmethod
+    def unfinished_copy(source):
+        """The draft of `source` that is furthest along, if one exists.
+
+        Several may exist from earlier interrupted runs; the useful one is
+        whichever already holds the most audio, not the newest.
+        """
+        drafts = Exam.objects.filter(title=source.title, section=source.section, published=False)
+        best, best_score = None, -1
+        for draft in drafts:
+            score = (1 if draft.audio_file else 0) + sum(
+                1 for question in draft.questions.all() if question.audio_file)
+            if score > best_score or (score == best_score and best and draft.id > best.id):
+                best, best_score = draft, score
+        return best
+
     def publish(self, exam):
         try:
             validate_exam(exam)
@@ -121,14 +157,44 @@ class Command(BaseCommand):
         exam.save()
         self.stdout.write(self.style.SUCCESS(f'   nashr qilindi (#{exam.id}).'))
 
-    def generate(self, text, style, voice, label):
-        try:
-            audio = speak(text, voice=voice, style=style)
-        except AIError as exc:
-            self.stdout.write(self.style.ERROR(f'   {label}: {exc}'))
-            return None
-        self.stdout.write(self.style.SUCCESS(f'   {label}: {len(audio) // 1024} KB'))
-        return audio
+    def generate(self, text, style, voice, label, options):
+        """One recording, pacing itself and waiting out a rate limit.
+
+        A free-tier key is measured per minute, and a request refused for
+        quota has still cost the wait. Spacing requests out and backing off is
+        the difference between finishing a paper and collecting eight errors.
+        """
+        delay = max(0.0, options['delay'])
+        attempts = max(0, options['retries']) + 1
+        for attempt in range(1, attempts + 1):
+            if self.spoken_at is not None and delay:
+                wait = delay - (time.monotonic() - self.spoken_at)
+                if wait > 0:
+                    time.sleep(wait)
+            try:
+                audio = speak(text, voice=voice, style=style,
+                              on_piece=lambda i, n: self.piece(i, n, label, delay))
+            except AIError as exc:
+                self.spoken_at = time.monotonic()
+                if str(exc) != 'AI_RATE_LIMIT' or attempt == attempts:
+                    self.stdout.write(self.style.ERROR(f'   {label}: {exc}'))
+                    return None
+                backoff = delay * (2 ** attempt) + 30
+                self.stdout.write(self.style.WARNING(
+                    f'   {label}: limit — {int(backoff)}s kutilmoqda ({attempt}/{attempts - 1})'))
+                time.sleep(backoff)
+                continue
+            self.spoken_at = time.monotonic()
+            self.stdout.write(self.style.SUCCESS(f'   {label}: {len(audio) // 1024} KB'))
+            return audio
+        return None
+
+    def piece(self, index, total, label, delay):
+        """Pace the requests WITHIN one long recording as well as between them."""
+        if total > 1:
+            self.stdout.write(f'   {label}: qism {index + 1}/{total}…', ending='\r')
+        if index and delay:
+            time.sleep(delay)
 
     def speaking(self, exam, options):
         made = failed = 0
@@ -144,7 +210,7 @@ class Command(BaseCommand):
                 if points:
                     text = text + ' You should say: ' + '; '.join(p.strip().rstrip('.') for p in points) + '.'
             audio = self.generate(text, EXAMINER_STYLE, options['voice'],
-                                  f'{question.position}. Part {question.part}')
+                                  f'{question.position}. Part {question.part}', options)
             if audio is None:
                 failed += 1
                 continue
@@ -161,7 +227,7 @@ class Command(BaseCommand):
         if not text:
             self.stdout.write(self.style.ERROR('   transkript bo‘sh — avval matnni yozing.'))
             return 0, 1
-        audio = self.generate(text, NARRATOR_STYLE, options['voice'], 'transkript')
+        audio = self.generate(text, NARRATOR_STYLE, options['voice'], 'transkript', options)
         if audio is None:
             return 0, 1
         exam.audio_file.save(f'listening-{exam.id}.wav', ContentFile(audio), save=True)

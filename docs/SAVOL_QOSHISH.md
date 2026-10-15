@@ -269,6 +269,16 @@ Listening'ni tugatish uchun audio kerak:
 
 Buyruq audioning **tezligini ham aytadi**. IELTS Listening ~140–150 so'z/daqiqa. Agar «JUDA TEZ» deb chiqsa, eshitib ko'ring va kerak bo'lsa `--replace` bilan qayta yarating — juda tez audio talabani Listening'da emas, tezlikda yiqitadi.
 
+### Limit (`AI_RATE_LIMIT`) chiqsa
+
+Bepul Gemini kaliti daqiqasiga bir nechta so'rovga ruxsat beradi, TTS modeli esa eng qattiq cheklangani. Buyruq buni hisobga oladi:
+
+- so'rovlar orasida **20 soniya** kutadi (`--delay 30` bilan ko'paytiring);
+- limitga urilsa kutib, **qayta uradi** (`--retries`);
+- uzun transkriptni bo'laklarga bo'lib o'qiydi va audioni birlashtiradi — 5400 belgilik transkript 3 ta so'rov bo'ladi, 42 ta emas.
+
+**Eng muhimi: buyruqni qayta ishga tushirish xavfsiz.** Allaqachon yaratilgan yozuvlar o'tkazib yuboriladi, `--duplicate` esa yangi nusxa yasamasdan **mavjud qoralamani davom ettiradi**. Ya'ni limit tugagach bir necha soatdan keyin yana ishga tushirsangiz, qolgan yozuvlargina yaratiladi.
+
 ### Nashr qilingan testga audio qo'shish
 
 Nashr qilingan test o'zgarmas. Buyruq uni **nusxalab**, nusxaga audio qo'yadi va kerak bo'lsa nashr qiladi:

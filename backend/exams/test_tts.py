@@ -6,6 +6,7 @@ import tempfile
 import wave
 from unittest.mock import patch
 
+from django.core.files.base import ContentFile
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
@@ -44,8 +45,9 @@ class SpeakTests(TestCase):
         self.assertGreater(called.call_args.kwargs['limit'], 8 * 1024 * 1024)
 
     def test_empty_and_overlong_text_never_reach_the_provider(self):
+        from .tts import MAX_TOTAL_CHARS
         with patch('exams.tts.post') as called:
-            for text in ('', '   ', 'x' * 5000):
+            for text in ('', '   ', 'x' * (MAX_TOTAL_CHARS + 1)):
                 with self.subTest(text=text[:10]), self.assertRaises(AIError):
                     speak(text)
             called.assert_not_called()
@@ -85,6 +87,7 @@ class GenerateAudioCommandTests(TestCase):
 
     def run_command(self, **kwargs):
         out = io.StringIO()
+        kwargs.setdefault('delay', 0)
         call_command('generate_audio', stdout=out, stderr=out, **kwargs)
         return out.getvalue()
 
@@ -135,9 +138,11 @@ class GenerateAudioCommandTests(TestCase):
 
     def test_a_provider_failure_is_reported_and_leaves_no_file(self):
         exam = self.speaking_draft()
-        with patch('exams.management.commands.generate_audio.speak', side_effect=AIError('AI_RATE_LIMIT')):
+        # A broken reply, not a rate limit: waiting cannot fix it, so this
+        # exercises the plain failure path without the backoff machinery.
+        with patch('exams.management.commands.generate_audio.speak', side_effect=AIError('AI_TTS_NO_AUDIO')):
             output = self.run_command()
-        self.assertIn('AI_RATE_LIMIT', output)
+        self.assertIn('AI_TTS_NO_AUDIO', output)
         self.assertIn('yaratilmadi', output)
         self.assertFalse(any(q.audio_file for q in exam.questions.all()))
 
@@ -171,6 +176,7 @@ class PublishedExamAudioTests(TestCase):
 
     def run_command(self, **kwargs):
         out = io.StringIO()
+        kwargs.setdefault('delay', 0)
         call_command('generate_audio', stdout=out, stderr=out, **kwargs)
         return out.getvalue()
 
@@ -236,7 +242,7 @@ class PaceReportTests(TestCase):
         self.listening(words)
         out = io.StringIO()
         with patch('exams.management.commands.generate_audio.speak', return_value=audio):
-            call_command('generate_audio', stdout=out, stderr=out)
+            call_command('generate_audio', stdout=out, stderr=out, delay=0)
         return out.getvalue()
 
     def test_an_exam_paced_recording_passes(self):
@@ -248,3 +254,192 @@ class PaceReportTests(TestCase):
         output = self.run_with(words=280, seconds=60)
         self.assertIn('JUDA TEZ', output)
         self.assertIn('--replace', output)
+
+
+class SplitTests(TestCase):
+    """Long text becomes as few requests as the limit allows, losing nothing."""
+
+    def test_short_text_is_one_request(self):
+        from .tts import split
+        self.assertEqual(split('Hello there.'), ['Hello there.'])
+
+    def test_short_paragraphs_are_packed_not_split_one_per_line(self):
+        """A transcript of dialogue lines must not become a request per line."""
+        from .tts import split
+        text = '\n\n'.join(f'SPEAKER: line number {i}.' for i in range(40))
+        pieces = split(text, limit=400)
+        self.assertLess(len(pieces), 10)
+        self.assertTrue(all(len(p) <= 400 for p in pieces))
+
+    def test_an_oversized_paragraph_breaks_at_sentence_ends(self):
+        from .tts import split
+        text = ' '.join(f'This is sentence number {i}.' for i in range(60))
+        pieces = split(text, limit=200)
+        self.assertTrue(all(len(p) <= 200 for p in pieces))
+        for piece in pieces:
+            self.assertTrue(piece.rstrip().endswith('.'), piece)
+
+    def test_a_single_overlong_sentence_is_cut_rather_than_dropped(self):
+        from .tts import split
+        text = 'word ' * 500
+        pieces = split(text, limit=100)
+        self.assertTrue(all(len(p) <= 100 for p in pieces))
+        self.assertEqual(''.join(pieces).replace(' ', ''), text.replace(' ', ''))
+
+    def test_no_word_is_lost_from_a_real_transcript(self):
+        from .papers.listening_campus import TRANSCRIPT
+        from .tts import split
+        pieces = split(TRANSCRIPT)
+        self.assertEqual(''.join(pieces).replace(' ', '').replace('\n', ''),
+                         TRANSCRIPT.replace(' ', '').replace('\n', ''))
+
+
+@override_settings(AI_ENABLED=True, GEMINI_API_KEY='k')
+class LongNarrationTests(TestCase):
+    def test_a_transcript_too_long_for_one_request_is_read_in_pieces(self):
+        from .papers.listening_campus import TRANSCRIPT
+        from .tts import split
+        expected = len(split(TRANSCRIPT))
+        self.assertGreater(expected, 1, 'this transcript is the case under test')
+        with patch('exams.tts._pcm', return_value=PCM) as called:
+            audio = speak(TRANSCRIPT)
+        self.assertEqual(called.call_count, expected)
+        with wave.open(io.BytesIO(audio)) as handle:
+            self.assertEqual(handle.getnframes(), SAMPLE_RATE * 2 * expected)
+
+    def test_the_pieces_are_joined_in_order(self):
+        with patch('exams.tts._pcm', side_effect=lambda t, v, s: t.encode()) as called:
+            speak('A' * 2000 + '\n\n' + 'B' * 2000 + '\n\n' + 'C' * 2000)
+        spoken = [call.args[0] for call in called.call_args_list]
+        self.assertEqual([p[0] for p in spoken], ['A', 'B', 'C'])
+
+    def test_a_whole_book_is_still_refused(self):
+        with patch('exams.tts._pcm') as called:
+            with self.assertRaises(AIError):
+                speak('x' * 50000)
+            called.assert_not_called()
+
+
+@override_settings(MEDIA_ROOT=MEDIA, AI_ENABLED=True, GEMINI_API_KEY='k')
+class RateLimitTests(TestCase):
+    """A rate limit must cost a wait, not the run."""
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def listening_draft(self):
+        exam = Exam.objects.create(title='L', section='Listening', duration_seconds=900,
+                                   passage='Welcome to the library.')
+        Question.objects.create(exam=exam, position=1, prompt='Q', accepted_answers=['yes'])
+        return exam
+
+    def run_command(self, **kwargs):
+        out = io.StringIO()
+        kwargs.setdefault('delay', 0)
+        call_command('generate_audio', stdout=out, stderr=out, **kwargs)
+        return out.getvalue()
+
+    def test_a_rate_limit_is_waited_out_and_the_recording_still_made(self):
+        exam = self.listening_draft()
+        attempts = [AIError('AI_RATE_LIMIT'), b'RIFFfake']
+
+        def answer(*args, **kwargs):
+            result = attempts.pop(0)
+            if isinstance(result, Exception):
+                raise result
+            return result
+
+        with patch('exams.management.commands.generate_audio.speak', side_effect=answer), \
+                patch('exams.management.commands.generate_audio.time.sleep') as slept:
+            output = self.run_command()
+        exam.refresh_from_db()
+        self.assertTrue(exam.audio_file, 'the retry must actually produce the recording')
+        self.assertIn('limit', output)
+        self.assertTrue(slept.called, 'a rate limit must be waited out, not retried at once')
+
+    def test_retries_are_bounded(self):
+        self.listening_draft()
+        with patch('exams.management.commands.generate_audio.speak',
+                   side_effect=AIError('AI_RATE_LIMIT')) as spoke, \
+                patch('exams.management.commands.generate_audio.time.sleep'):
+            output = self.run_command(retries=2)
+        self.assertEqual(spoke.call_count, 3)
+        self.assertIn('AI_RATE_LIMIT', output)
+
+    def test_an_error_that_is_not_a_rate_limit_is_not_retried(self):
+        self.listening_draft()
+        with patch('exams.management.commands.generate_audio.speak',
+                   side_effect=AIError('AI_TTS_NO_AUDIO')) as spoke, \
+                patch('exams.management.commands.generate_audio.time.sleep'):
+            self.run_command(retries=5)
+        self.assertEqual(spoke.call_count, 1, 'waiting cannot fix a broken reply')
+
+
+@override_settings(MEDIA_ROOT=MEDIA, AI_ENABLED=True, GEMINI_API_KEY='k')
+class ResumeTests(TestCase):
+    """An interrupted run must be resumable, not restarted from nothing."""
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def speaking(self):
+        exam = Exam.objects.create(title='S', section='Speaking', duration_seconds=900)
+        for position, part in ((1, 1), (2, 2), (3, 3)):
+            Question.objects.create(exam=exam, position=position, part=part,
+                                    prompt=f'Prompt {position}',
+                                    choices=['A point'] if part == 2 else [], accepted_answers=[])
+        exam.published = True
+        exam.save()
+        return exam
+
+    def run_command(self, **kwargs):
+        out = io.StringIO()
+        kwargs.setdefault('delay', 0)
+        call_command('generate_audio', stdout=out, stderr=out, **kwargs)
+        return out.getvalue()
+
+    def test_a_second_run_resumes_the_same_draft(self):
+        live = self.speaking()
+        failing = [b'RIFF1', AIError('AI_RATE_LIMIT'), AIError('AI_RATE_LIMIT')]
+
+        def answer(*args, **kwargs):
+            result = failing.pop(0)
+            if isinstance(result, Exception):
+                raise result
+            return result
+
+        with patch('exams.management.commands.generate_audio.speak', side_effect=answer), \
+                patch('exams.management.commands.generate_audio.time.sleep'):
+            self.run_command(duplicate=True, retries=0)
+        drafts = Exam.objects.filter(published=False)
+        self.assertEqual(drafts.count(), 1)
+        self.assertEqual(sum(1 for q in drafts.get().questions.all() if q.audio_file), 1)
+
+        with patch('exams.management.commands.generate_audio.speak', return_value=b'RIFF2'), \
+                patch('exams.management.commands.generate_audio.time.sleep'):
+            output = self.run_command(duplicate=True)
+        self.assertIn('davom ettirilmoqda', output)
+        self.assertEqual(Exam.objects.filter(published=False).count(), 1,
+                         'a second copy would strand the audio already paid for')
+        draft = Exam.objects.get(published=False)
+        self.assertTrue(all(q.audio_file for q in draft.questions.all()))
+        self.assertEqual(Exam.objects.filter(pk=live.pk, published=True).count(), 1)
+
+    def test_the_furthest_along_draft_wins_when_several_exist(self):
+        """Earlier versions of this command left a trail of empty copies."""
+        live = self.speaking()
+        from exams.services import duplicate_exam
+        empty = duplicate_exam(live)
+        partial = duplicate_exam(live)
+        question = partial.questions.first()
+        question.audio_file.save('x.wav', ContentFile(b'RIFF'), save=True)
+        with patch('exams.management.commands.generate_audio.speak', return_value=b'RIFFnew'):
+            output = self.run_command(duplicate=True)
+        self.assertIn(f'#{partial.id}', output)
+        self.assertNotIn(f'davom ettirilmoqda\n\n#{empty.id}', output)
+        empty.refresh_from_db()
+        self.assertFalse(any(q.audio_file for q in empty.questions.all()))

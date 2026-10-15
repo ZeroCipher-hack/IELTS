@@ -22,7 +22,47 @@ from .gemini import AIError, post
 # change person between questions.
 EXAMINER_VOICE = 'Kore'
 SAMPLE_RATE = 24000
-MAX_CHARS = 4500
+# One request's worth of text. A Listening transcript is several times this,
+# so it is read in pieces and the audio is joined; the pieces are cut at
+# paragraph and sentence boundaries so no join lands inside a sentence.
+MAX_CHARS = 2400
+# A whole paper, not a single request: the real ceiling on one recording.
+MAX_TOTAL_CHARS = 40000
+
+
+def split(text, limit=MAX_CHARS):
+    """Pack `text` into as FEW request-sized pieces as the limit allows.
+
+    Every piece is one request, and a free-tier key has very few of those, so
+    packing matters: a transcript of short dialogue lines must not become one
+    request per line. Paragraphs are filled up to the limit, an oversized
+    paragraph is divided at sentence ends, and only a single sentence longer
+    than the limit is ever cut mid-sentence.
+    """
+    units = []
+    for block in [b.strip() for b in text.split('\n\n') if b.strip()]:
+        if len(block) <= limit:
+            units.append(block)
+            continue
+        for sentence in re.split(r'(?<=[.!?])\s+', block):
+            while len(sentence) > limit:
+                units.append(sentence[:limit])
+                sentence = sentence[limit:]
+            if sentence:
+                units.append(sentence)
+
+    pieces, current = [], ''
+    for unit in units:
+        joined = (current + '\n\n' + unit) if current else unit
+        if len(joined) <= limit:
+            current = joined
+        else:
+            if current:
+                pieces.append(current)
+            current = unit
+    if current:
+        pieces.append(current)
+    return pieces
 
 
 def _wav(pcm: bytes) -> bytes:
@@ -35,13 +75,31 @@ def _wav(pcm: bytes) -> bytes:
     return buffer.getvalue()
 
 
-def speak(text, voice=EXAMINER_VOICE, style=''):
-    """Return WAV bytes for `text`. Raises AIError; never returns silence."""
+def speak(text, voice=EXAMINER_VOICE, style='', on_piece=None):
+    """Return WAV bytes for `text`. Raises AIError; never returns silence.
+
+    Text longer than one request is read in pieces and the audio joined.
+    `on_piece(index, total)` is called before each request so a caller can
+    show progress and pace itself against a rate limit.
+    """
     text = (text or '').strip()
     if not text:
         raise AIError('AI_TTS_EMPTY')
-    if len(text) > MAX_CHARS:
+    if len(text) > MAX_TOTAL_CHARS:
         raise AIError('AI_TTS_TOO_LONG')
+    pieces = split(text)
+    if not pieces:
+        raise AIError('AI_TTS_EMPTY')
+    frames = []
+    for index, piece in enumerate(pieces):
+        if on_piece:
+            on_piece(index, len(pieces))
+        frames.append(_pcm(piece, voice, style))
+    return _wav(b''.join(frames))
+
+
+def _pcm(text, voice, style):
+    """One request: raw PCM for one piece of text."""
     model = settings.GEMINI_TTS_MODEL
     if not re.fullmatch(r'[A-Za-z0-9._-]+', model):
         raise AIError('AI_MODEL_INVALID')
@@ -68,6 +126,6 @@ def speak(text, voice=EXAMINER_VOICE, style=''):
     except Exception:
         raise AIError('AI_TTS_NO_AUDIO') from None
     # Two bytes a frame; a fraction of a second is a failure, not a recording.
-    if len(pcm) < SAMPLE_RATE:
+    if len(pcm) < SAMPLE_RATE // 2:
         raise AIError('AI_TTS_NO_AUDIO')
-    return _wav(pcm)
+    return pcm
