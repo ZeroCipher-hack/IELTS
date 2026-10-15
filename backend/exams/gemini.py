@@ -19,8 +19,36 @@ def post(path,data,limit=1024*1024,timeout=45):
             raw=response.read(limit+1)
             if len(raw)>limit:raise AIError('AI_RESPONSE_TOO_LARGE')
             return json.loads(raw)
-    except HTTPError as exc:raise AIError('AI_RATE_LIMIT' if exc.code==429 else 'AI_PROVIDER_ERROR') from None
+    except HTTPError as exc:
+        if exc.code!=429:raise AIError('AI_PROVIDER_ERROR') from None
+        raise _throttled(exc) from None
     except (URLError,TimeoutError,OSError,ValueError):raise AIError('AI_UNAVAILABLE') from None
+
+def _throttled(exc):
+    """A rate limit, carrying only how long to wait and whether it is daily.
+
+    Google states both in the 429 body. Reading them is the difference between
+    waiting the ~20 seconds it actually asks for and sleeping through a daily
+    cap that will not lift until tomorrow. NOTHING from the body is kept: the
+    delay is parsed as a number and the quota id only as a yes/no, so no
+    provider text -- which quotes the request back -- can reach a log.
+    """
+    error=AIError('AI_RATE_LIMIT');error.retry_after=None;error.per_day=False
+    try:
+        details=json.loads(exc.read(64*1024)).get('error',{}).get('details',[])
+    except Exception:
+        return error
+    if not isinstance(details,list):return error
+    for entry in details:
+        if not isinstance(entry,dict):continue
+        delay=entry.get('retryDelay')
+        if isinstance(delay,str):
+            found=re.fullmatch(r'(\d{1,6})(?:\.\d+)?s',delay.strip())
+            if found:error.retry_after=min(int(found.group(1)),3600)
+        for violation in entry.get('violations') or []:
+            if isinstance(violation,dict) and 'perday' in str(violation.get('quotaId','')).lower():
+                error.per_day=True
+    return error
 
 CRITERIA=('task_response','coherence_cohesion','lexical_resource','grammar')
 SCHEMA={'type':'OBJECT','properties':{'tasks':{'type':'ARRAY','items':{'type':'OBJECT','properties':{

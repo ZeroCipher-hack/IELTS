@@ -1,6 +1,7 @@
 """Generated examiner audio: a real recording or a clear failure, never silence."""
 import base64
 import io
+import json
 import shutil
 import tempfile
 import wave
@@ -356,7 +357,8 @@ class RateLimitTests(TestCase):
             output = self.run_command()
         exam.refresh_from_db()
         self.assertTrue(exam.audio_file, 'the retry must actually produce the recording')
-        self.assertIn('limit', output)
+        self.assertIn('AI_RATE_LIMIT', output)
+        self.assertIn('kutilmoqda', output)
         self.assertTrue(slept.called, 'a rate limit must be waited out, not retried at once')
 
     def test_retries_are_bounded(self):
@@ -443,3 +445,160 @@ class ResumeTests(TestCase):
         self.assertNotIn(f'davom ettirilmoqda\n\n#{empty.id}', output)
         empty.refresh_from_db()
         self.assertFalse(any(q.audio_file for q in empty.questions.all()))
+
+
+class ThrottleDetailTests(TestCase):
+    """Google says how long to wait and which quota ran out. Read both."""
+
+    def throttle(self, details):
+        from urllib.error import HTTPError
+        body = json.dumps({'error': {'code': 429, 'status': 'RESOURCE_EXHAUSTED',
+                                     'message': 'Quota exceeded for key AIzaSECRET',
+                                     'details': details}}).encode()
+        return HTTPError('https://x', 429, 'Too Many Requests', {}, io.BytesIO(body))
+
+    def raised(self, details):
+        from .gemini import post
+        with override_settings(AI_ENABLED=True, GEMINI_API_KEY='k'):
+            with patch('exams.gemini.urlopen', side_effect=self.throttle(details)):
+                with self.assertRaises(AIError) as caught:
+                    post('models/x:generateContent', {})
+        return caught.exception
+
+    def test_the_retry_delay_is_read(self):
+        error = self.raised([{'@type': 'type.googleapis.com/google.rpc.RetryInfo',
+                              'retryDelay': '27s'}])
+        self.assertEqual(str(error), 'AI_RATE_LIMIT')
+        self.assertEqual(error.retry_after, 27)
+        self.assertFalse(error.per_day)
+
+    def test_a_daily_quota_is_recognised(self):
+        error = self.raised([{'@type': 'type.googleapis.com/google.rpc.QuotaFailure',
+                              'violations': [{'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier'}]}])
+        self.assertTrue(error.per_day)
+
+    def test_a_per_minute_quota_is_not_mistaken_for_a_daily_one(self):
+        error = self.raised([{'@type': 'type.googleapis.com/google.rpc.QuotaFailure',
+                              'violations': [{'quotaId': 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier'}]}])
+        self.assertFalse(error.per_day)
+
+    def test_the_provider_message_never_survives(self):
+        """That message quotes the rejected key back."""
+        error = self.raised([{'retryDelay': '5s'}])
+        self.assertNotIn('AIzaSECRET', str(error))
+        self.assertNotIn('Quota', str(error))
+
+    def test_a_nonsense_delay_is_ignored_rather_than_trusted(self):
+        for delay in ('not-a-delay', '99999999s', '', None, {'s': 1}):
+            with self.subTest(delay=delay):
+                error = self.raised([{'retryDelay': delay}])
+                self.assertIn(error.retry_after, (None, 3600))
+
+    def test_a_body_that_is_not_json_still_gives_a_rate_limit(self):
+        from urllib.error import HTTPError
+        from .gemini import post
+        broken = HTTPError('https://x', 429, 'Too Many', {}, io.BytesIO(b'<html>nope'))
+        with override_settings(AI_ENABLED=True, GEMINI_API_KEY='k'):
+            with patch('exams.gemini.urlopen', side_effect=broken):
+                with self.assertRaises(AIError) as caught:
+                    post('models/x:generateContent', {})
+        self.assertEqual(str(caught.exception), 'AI_RATE_LIMIT')
+        self.assertIsNone(caught.exception.retry_after)
+
+    def test_a_non_429_is_still_a_plain_provider_error(self):
+        from urllib.error import HTTPError
+        from .gemini import post
+        forbidden = HTTPError('https://x', 403, 'Forbidden', {}, io.BytesIO(b'{}'))
+        with override_settings(AI_ENABLED=True, GEMINI_API_KEY='k'):
+            with patch('exams.gemini.urlopen', side_effect=forbidden):
+                with self.assertRaises(AIError) as caught:
+                    post('models/x:generateContent', {})
+        self.assertEqual(str(caught.exception), 'AI_PROVIDER_ERROR')
+
+
+@override_settings(MEDIA_ROOT=MEDIA, AI_ENABLED=True, GEMINI_API_KEY='k')
+class DailyQuotaTests(TestCase):
+    """A daily cap stops the run; it does not cost three more sleeps."""
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def speaking(self):
+        exam = Exam.objects.create(title='S', section='Speaking', duration_seconds=900)
+        for position, part in ((1, 1), (2, 2), (3, 3)):
+            Question.objects.create(exam=exam, position=position, part=part,
+                                    prompt=f'Prompt {position}',
+                                    choices=['A point'] if part == 2 else [], accepted_answers=[])
+        return exam
+
+    def exhausted(self):
+        error = AIError('AI_RATE_LIMIT')
+        error.per_day = True
+        error.retry_after = None
+        return error
+
+    def run_command(self, **kwargs):
+        out = io.StringIO()
+        kwargs.setdefault('delay', 0)
+        call_command('generate_audio', stdout=out, stderr=out, **kwargs)
+        return out.getvalue()
+
+    def test_a_daily_cap_stops_at_once_without_sleeping(self):
+        self.speaking()
+        with patch('exams.management.commands.generate_audio.speak',
+                   side_effect=self.exhausted()) as spoke, \
+                patch('exams.management.commands.generate_audio.time.sleep') as slept:
+            output = self.run_command(retries=5)
+        self.assertEqual(spoke.call_count, 1, 'waiting cannot lift a daily cap')
+        slept.assert_not_called()
+        self.assertIn('kunlik limit', output.lower())
+
+    def test_the_operator_is_told_what_to_do_tomorrow(self):
+        self.speaking()
+        with patch('exams.management.commands.generate_audio.speak', side_effect=self.exhausted()):
+            output = self.run_command()
+        self.assertIn('Ertaga', output)
+        self.assertIn('davom etadi', output)
+
+    def test_work_already_done_is_kept(self):
+        exam = self.speaking()
+        answers = [b'RIFFone', self.exhausted()]
+
+        def answer(*args, **kwargs):
+            result = answers.pop(0)
+            if isinstance(result, Exception):
+                raise result
+            return result
+
+        with patch('exams.management.commands.generate_audio.speak', side_effect=answer):
+            self.run_command()
+        self.assertEqual(sum(1 for q in exam.questions.all() if q.audio_file), 1)
+
+    def test_a_stated_retry_delay_is_used_instead_of_a_guess(self):
+        self.speaking()
+        error = AIError('AI_RATE_LIMIT')
+        error.per_day = False
+        error.retry_after = 27
+        with patch('exams.management.commands.generate_audio.speak', side_effect=error), \
+                patch('exams.management.commands.generate_audio.time.sleep') as slept:
+            output = self.run_command(retries=1, delay=0)
+        self.assertIn('32s', output)
+        self.assertIn(32, [int(call.args[0]) for call in slept.call_args_list])
+
+    def test_a_network_blip_is_retried_too(self):
+        self.speaking()
+        attempts = [AIError('AI_UNAVAILABLE'), b'RIFFok', b'RIFFok', b'RIFFok']
+
+        def answer(*args, **kwargs):
+            result = attempts.pop(0)
+            if isinstance(result, Exception):
+                raise result
+            return result
+
+        with patch('exams.management.commands.generate_audio.speak', side_effect=answer), \
+                patch('exams.management.commands.generate_audio.time.sleep'):
+            self.run_command()
+        exam = Exam.objects.get()
+        self.assertTrue(all(q.audio_file for q in exam.questions.all()))

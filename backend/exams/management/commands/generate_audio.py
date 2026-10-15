@@ -30,6 +30,10 @@ TRANSCRIPT_NOISE = re.compile(r'^\s*(TRANSKRIPT|TRANSCRIPT)\s*:?\s*$', re.MULTIL
 # costs the whole run.
 DEFAULT_DELAY = 20.0
 
+# Waiting can fix a per-minute limit and a network blip. It cannot fix a
+# malformed reply, a bad model name or an exhausted daily quota.
+RETRYABLE = {'AI_RATE_LIMIT', 'AI_UNAVAILABLE'}
+
 # Pace is not a detail. A candidate who fails because the recording outran
 # them failed at nothing the exam is meant to measure. Official IELTS
 # Listening runs at roughly 140-150 words a minute; a model left to its own
@@ -110,8 +114,11 @@ class Command(BaseCommand):
             return
 
         self.spoken_at = None
+        self.exhausted = False
         made = failed = 0
         for exam in exams:
+            if self.exhausted:
+                break
             if exam.published:
                 self.stdout.write(self.style.ERROR(
                     f'#{exam.id} «{exam.title}» nashr qilingan — o‘zgartirilmaydi.'))
@@ -130,6 +137,14 @@ class Command(BaseCommand):
         if failed:
             self.stdout.write(self.style.ERROR(
                 f'{failed} ta yozuv yaratilmadi. Yuqoridagi xato kodlariga qarang.'))
+        if self.exhausted:
+            self.stdout.write(self.style.WARNING(
+                '\nKunlik bepul kvota tugadi. Kutish yordam bermaydi — kvota Tinch okeani '
+                'vaqti bilan yarim tunda yangilanadi.\n'
+                'Yaratilgan yozuvlar saqlandi. Ertaga AYNAN SHU buyruqni qayta ishlating: '
+                'u qolganidan davom etadi, yangi nusxa yaratmaydi.\n'
+                'Avval Listening’ni tugating (u kamroq so‘rov oladi va usiz to‘liq imtihon '
+                'boshlanmaydi); Speaking audiosiz ham ishlaydi — savollarni brauzer o‘qiydi.'))
 
     @staticmethod
     def unfinished_copy(source):
@@ -176,12 +191,21 @@ class Command(BaseCommand):
                               on_piece=lambda i, n: self.piece(i, n, label, delay))
             except AIError as exc:
                 self.spoken_at = time.monotonic()
-                if str(exc) != 'AI_RATE_LIMIT' or attempt == attempts:
+                code = str(exc)
+                if getattr(exc, 'per_day', False):
+                    # A daily cap does not lift by waiting. Saying so is worth
+                    # more than three more sleeps and the same error.
+                    self.exhausted = True
+                    self.stdout.write(self.style.ERROR(f'   {label}: kunlik limit tugadi'))
+                    return None
+                if code not in RETRYABLE or attempt == attempts:
                     self.stdout.write(self.style.ERROR(f'   {label}: {exc}'))
                     return None
-                backoff = delay * (2 ** attempt) + 30
+                # Google states how long to wait; its number beats any guess.
+                backoff = getattr(exc, 'retry_after', None)
+                backoff = (backoff + 5) if backoff else delay * (2 ** attempt) + 30
                 self.stdout.write(self.style.WARNING(
-                    f'   {label}: limit — {int(backoff)}s kutilmoqda ({attempt}/{attempts - 1})'))
+                    f'   {label}: {code} — {int(backoff)}s kutilmoqda ({attempt}/{attempts - 1})'))
                 time.sleep(backoff)
                 continue
             self.spoken_at = time.monotonic()
@@ -213,6 +237,8 @@ class Command(BaseCommand):
                                   f'{question.position}. Part {question.part}', options)
             if audio is None:
                 failed += 1
+                if self.exhausted:
+                    break
                 continue
             question.audio_file.save(f'q{exam.id}-{question.position}.wav',
                                      ContentFile(audio), save=True)

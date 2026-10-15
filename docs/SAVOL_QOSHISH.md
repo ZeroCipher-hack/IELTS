@@ -277,6 +277,17 @@ Bepul Gemini kaliti daqiqasiga bir nechta so'rovga ruxsat beradi, TTS modeli esa
 - limitga urilsa kutib, **qayta uradi** (`--retries`);
 - uzun transkriptni bo'laklarga bo'lib o'qiydi va audioni birlashtiradi — 5400 belgilik transkript 3 ta so'rov bo'ladi, 42 ta emas.
 
+Google javobida **qancha kutish kerakligini** aytadi va buyruq aynan shu raqamga amal qiladi — taxmin qilmaydi.
+
+### «Kunlik limit tugadi»
+
+Bepul kvota ikki xil: daqiqalik va **kunlik**. Kunligi tugasa, kutish umuman yordam bermaydi — buyruq darhol to'xtaydi va shuni aytadi. Kvota Tinch okeani vaqti bilan yarim tunda yangilanadi.
+
+Bunday holatda:
+
+1. **Avval Listening'ni tugating** — u atigi 3 ta so'rov oladi va **usiz to'liq imtihon umuman boshlanmaydi**.
+2. Speaking audiosiz ham ishlaydi: savollarni brauzer ovoz bilan o'qiydi, o'qiy olmasa ekranda ko'rsatadi. Ya'ni Speaking audiosi — yaxshilanish, to'siq emas.
+
 **Eng muhimi: buyruqni qayta ishga tushirish xavfsiz.** Allaqachon yaratilgan yozuvlar o'tkazib yuboriladi, `--duplicate` esa yangi nusxa yasamasdan **mavjud qoralamani davom ettiradi**. Ya'ni limit tugagach bir necha soatdan keyin yana ishga tushirsangiz, qolgan yozuvlargina yaratiladi.
 
 ### Nashr qilingan testga audio qo'shish
