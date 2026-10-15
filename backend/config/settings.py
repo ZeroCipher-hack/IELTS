@@ -48,6 +48,7 @@ AI_ENABLED=os.getenv('AI_ENABLED','0')=='1'
 GEMINI_API_KEY=os.getenv('GEMINI_API_KEY','')
 GEMINI_WRITING_MODEL=os.getenv('GEMINI_WRITING_MODEL','gemini-2.5-flash')
 GEMINI_LIVE_MODEL=os.getenv('GEMINI_LIVE_MODEL','gemini-3.1-flash-live-preview')
+GEMINI_TTS_MODEL=os.getenv('GEMINI_TTS_MODEL','gemini-2.5-flash-preview-tts')
 
 VOICE_PRACTICE_ENABLED=os.getenv('VOICE_PRACTICE_ENABLED','0')=='1'
 # Opens every published exam only when explicitly enabled for local testing.

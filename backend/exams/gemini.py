@@ -8,14 +8,16 @@ class AIError(Exception):pass
 
 def configured():return bool(settings.GEMINI_API_KEY and settings.AI_ENABLED)
 
-def post(path,data):
+def post(path,data,limit=1024*1024,timeout=45):
+    # limit/timeout are widened only by the speech caller: generated audio is
+    # megabytes of base64, far beyond what a JSON assessment ever returns.
     if not configured():raise AIError('AI_NOT_CONFIGURED')
     request=Request('https://generativelanguage.googleapis.com/v1beta/'+path,
                     data=json.dumps(data).encode(),headers={'Content-Type':'application/json','x-goog-api-key':settings.GEMINI_API_KEY},method='POST')
     try:
-        with urlopen(request,timeout=45) as response:
-            raw=response.read(1024*1024+1)
-            if len(raw)>1024*1024:raise AIError('AI_RESPONSE_TOO_LARGE')
+        with urlopen(request,timeout=timeout) as response:
+            raw=response.read(limit+1)
+            if len(raw)>limit:raise AIError('AI_RESPONSE_TOO_LARGE')
             return json.loads(raw)
     except HTTPError as exc:raise AIError('AI_RATE_LIMIT' if exc.code==429 else 'AI_PROVIDER_ERROR') from None
     except (URLError,TimeoutError,OSError,ValueError):raise AIError('AI_UNAVAILABLE') from None

@@ -85,7 +85,10 @@ def catalog(request):
     exams=Exam.objects.filter(published=True).prefetch_related('questions')
     if settings.EXAMS_OPEN_ACCESS:
         access.update(exams.values_list('id',flat=True))
-    return JsonResponse({'exams':[{**public_exam(e),'has_access':e.id in access} for e in exams],'free_attempt_available':True if settings.EXAMS_OPEN_ACCESS else not profile.free_attempt_used,'open_access':settings.EXAMS_OPEN_ACCESS,'payment_enabled':False})
+    from .gemini import configured
+    # The catalog reports whether assessment is actually reachable, so the UI
+    # warns about an unassessed Writing attempt only when that is true.
+    return JsonResponse({'exams':[{**public_exam(e),'has_access':e.id in access} for e in exams],'free_attempt_available':True if settings.EXAMS_OPEN_ACCESS else not profile.free_attempt_used,'open_access':settings.EXAMS_OPEN_ACCESS,'payment_enabled':False,'ai_ready':configured()})
 def payload(a,include_questions=True):
     snap=a.snapshot
     data={'id':str(a.id),'title':snap['title'],'section':snap['section'],'state':a.state,'deadline':a.deadline.isoformat(),'started_at':a.started_at.isoformat(),'answers':a.answers,'review_positions':a.review_positions,'result':a.result,'server_time':timezone.now().isoformat()}

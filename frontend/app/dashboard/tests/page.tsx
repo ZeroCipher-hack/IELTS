@@ -16,7 +16,7 @@ const sections = [
 export default function TestsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t, say, exams, free, openAccess, history, catalogLoading, busy } = useProduct();
+  const { t, say, exams, free, openAccess, aiReady, history, catalogLoading, busy } = useProduct();
   const [sectionFilter, setSectionFilter] = useState(searchParams.get('section') || 'All');
 
   if (catalogLoading) return <LoadingSkeleton label={t.loading} view="tests" />;
@@ -26,7 +26,10 @@ export default function TestsPage() {
       router.push(`/dashboard/payments?exam=${encodeURIComponent(exam.title)}`);
       return;
     }
-    if (exam.section === 'Writing' && !window.confirm(t.writingNotice)) return;
+    // Warn only when assessment really is unreachable. Asking every candidate
+    // to confirm a connected service trains them to dismiss the dialog unread.
+    if (!aiReady && (exam.section === 'Writing' || exam.section === 'Speaking')
+        && !window.confirm(t.writingNotice)) return;
     router.push(`/dashboard/tests/${exam.id}`);
   }
 

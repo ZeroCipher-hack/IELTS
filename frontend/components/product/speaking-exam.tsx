@@ -26,6 +26,74 @@ const PART_NAMES: Record<number, Record<string, string>> = {
   3: { uz: 'Part 3 · Muhokama', en: 'Part 3 · Discussion', ru: 'Part 3 · Обсуждение' },
 };
 
+/**
+ * Resolves with the device's voices, waiting for the engine to load them.
+ *
+ * getVoices() returns an empty list on the first call in Chromium browsers;
+ * the list arrives later with a `voiceschanged` event. Reading it once is why
+ * the examiner stayed silent: the code concluded the device had no voice
+ * before the device had answered.
+ */
+function voices(): Promise<SpeechSynthesisVoice[]> {
+  return new Promise((resolve) => {
+    const synth = window.speechSynthesis;
+    if (!synth) return resolve([]);
+    const ready = synth.getVoices();
+    if (ready.length) return resolve(ready);
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      synth.removeEventListener('voiceschanged', finish);
+      resolve(synth.getVoices());
+    };
+    synth.addEventListener('voiceschanged', finish);
+    // A browser with no speech engine at all never fires the event.
+    setTimeout(finish, 2000);
+  });
+}
+
+/** Plays the question. Resolves true when the candidate actually heard it. */
+async function deliver(q: Question): Promise<boolean> {
+  if (q.audio_url) {
+    return new Promise<boolean>((resolve) => {
+      let settled = false;
+      const end = (heard: boolean) => { if (!settled) { settled = true; resolve(heard); } };
+      const el = new Audio(q.audio_url);
+      el.onended = () => end(true);
+      el.onerror = () => end(false);
+      void el.play().catch(() => end(false));
+      setTimeout(() => end(true), 120000);
+    });
+  }
+
+  const list = await voices();
+  const synth = window.speechSynthesis;
+  if (!synth || !list.length) return false;
+  // Prefer an English voice; fall back to the default rather than refusing to
+  // speak, since a non-English engine still reads English words recognisably.
+  const voice = list.find((v) => v.lang.toLowerCase().startsWith('en-gb'))
+    ?? list.find((v) => v.lang.toLowerCase().startsWith('en'))
+    ?? null;
+
+  return new Promise<boolean>((resolve) => {
+    let settled = false;
+    const end = (heard: boolean) => { if (!settled) { settled = true; resolve(heard); } };
+    try {
+      const utterance = new SpeechSynthesisUtterance(q.prompt);
+      if (voice) { utterance.voice = voice; utterance.lang = voice.lang; }
+      else utterance.lang = 'en-GB';
+      utterance.rate = 0.95;
+      utterance.onend = () => end(true);
+      utterance.onerror = () => end(false);
+      synth.cancel();
+      synth.speak(utterance);
+      // Enough slack for a long prompt; a silent engine never stalls the exam.
+      setTimeout(() => end(true), Math.min(20000, 3000 + q.prompt.split(/\s+/).length * 450));
+    } catch { end(false); }
+  });
+}
+
 export default function SpeakingExam({
   attempt, t, say, onClose, onComplete,
 }: {
@@ -45,6 +113,7 @@ export default function SpeakingExam({
   const [error, setError] = useState('');
   const [consent, setConsent] = useState(false);
   const [level, setLevel] = useState(0);
+  const [silent, setSilent] = useState(false);
 
   const clips = useRef<Blob[]>([]);
   const stream = useRef<MediaStream | null>(null);
@@ -133,35 +202,8 @@ export default function SpeakingExam({
 
     // Deliver the prompt. Every path resolves: a device with no English voice,
     // a missing file or a blocked autoplay must not stall the exam.
-    await new Promise<void>((resolve) => {
-      const done = () => resolve();
-      if (q.audio_url) {
-        const el = new Audio(q.audio_url);
-        el.onended = done;
-        el.onerror = done;
-        void el.play().catch(done);
-        setTimeout(done, 60000);
-        return;
-      }
-      try {
-        const synth = window.speechSynthesis;
-        // No speech engine, or no English voice on this device: the prompt is on
-        // screen, so open the microphone at once rather than sitting in silence.
-        const voice = synth?.getVoices().find((v) => v.lang.toLowerCase().startsWith('en'));
-        if (!synth || !voice) return done();
-        const utterance = new SpeechSynthesisUtterance(q.prompt);
-        utterance.voice = voice;
-        utterance.lang = voice.lang;
-        utterance.rate = 0.95;
-        utterance.onend = done;
-        utterance.onerror = done;
-        synth.cancel();
-        synth.speak(utterance);
-        // Roughly 12 words a second of slack, so a long prompt is never cut off
-        // and a silent failure never stalls the exam.
-        setTimeout(done, Math.min(20000, 3000 + q.prompt.split(/\s+/).length * 450));
-      } catch { done(); }
-    });
+    const spoken = await deliver(q);
+    setSilent(!spoken);
 
     try {
       const mime = ['audio/webm', 'audio/ogg', 'audio/mp4'].find((m) => MediaRecorder.isTypeSupported(m)) ?? '';
@@ -312,6 +354,13 @@ export default function SpeakingExam({
             </p>
           ) : (
             <>
+              {silent && (
+                <p className="availability-note" role="status">
+                  {say('Qurilmangizda ovoz chiqmadi — savolni ekrandan o‘qing. Har bir savolga yozuv yuklangach, imtihon oluvchi ovoz bilan gapiradi.',
+                    'Your device produced no speech — read the question on screen. Once a recording is uploaded for each question, the examiner is heard aloud.',
+                    'Устройство не воспроизвело речь — прочитайте вопрос на экране. Когда загружены записи, экзаменатор звучит вслух.')}
+                </p>
+              )}
               <div className="speaking-meter" aria-hidden="true">
                 <span style={{ transform: `scaleX(${Math.min(1, level * 2.2)})` }} />
               </div>
