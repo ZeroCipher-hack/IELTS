@@ -245,7 +245,6 @@ class Command(BaseCommand):
                 time.sleep(backoff)
                 continue
             self.spoken_at = time.monotonic()
-            self.stdout.write(self.style.SUCCESS(f'   {label}: {len(audio) // 1024} KB'))
             return audio
         return None
 
@@ -279,6 +278,13 @@ class Command(BaseCommand):
             stored, extension = compress(audio)
             question.audio_file.save(f'q{exam.id}-{question.position}.{extension}',
                                      ContentFile(stored), save=True)
+            # Report what is STORED. Printing the uncompressed size next to an
+            # MP3 file invites reading it as a duration and getting it six
+            # times wrong -- which is exactly what it did to me.
+            seconds = (len(audio) - 44) / (SAMPLE_RATE * 2)
+            self.stdout.write(self.style.SUCCESS(
+                f'   {question.position}. Part {question.part}: '
+                f'{seconds:.1f}s, {len(stored) // 1024} KB'))
             made += 1
         return made, failed
 

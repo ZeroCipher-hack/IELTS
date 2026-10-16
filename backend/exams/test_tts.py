@@ -953,3 +953,29 @@ class PublishedExamGuidanceTests(TestCase):
             call_command('generate_audio', stdout=out, stderr=out, exam=exam.id, delay=0)
         self.assertIn(f'--exam {exam.id} --duplicate --publish', out.getvalue())
         self.assertNotIn('--retime', out.getvalue())
+
+
+@override_settings(MEDIA_ROOT=MEDIA, AI_ENABLED=True, GEMINI_API_KEY='k')
+class QuestionAudioReportTests(TestCase):
+    """Report the size of what is stored, and the duration separately."""
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def test_the_size_shown_is_the_stored_file_not_the_raw_wav(self):
+        from exams.tts import SAMPLE_RATE
+        exam = Exam.objects.create(title='S', section='Speaking', duration_seconds=900)
+        Question.objects.create(exam=exam, position=1, part=1, prompt='Where do you live?',
+                                accepted_answers=[])
+        wav = b'RIFF' + b'\0' * 40 + b'\0' * (SAMPLE_RATE * 2 * 5)   # five seconds
+        out = io.StringIO()
+        with patch('exams.management.commands.generate_audio.speak', return_value=wav), \
+                patch('exams.management.commands.generate_audio.compress',
+                      return_value=(b'ID3' + b'x' * (40 * 1024), 'mp3')):
+            call_command('generate_audio', stdout=out, stderr=out, delay=0)
+        output = out.getvalue()
+        self.assertIn('5.0s', output)
+        self.assertIn('40 KB', output, 'the MP3 that was stored')
+        self.assertNotIn('468 KB', output, 'not the WAV it was made from')
