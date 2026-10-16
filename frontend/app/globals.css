@@ -293,6 +293,44 @@ html[data-theme="dark"] {
 .exam-card > .primary, .exam-card > .secondary { margin-top: auto; width: 100%; }
 .availability-note { font-size: 14px; font-weight: 600; color: var(--ink-muted); }
 /* ---------------------------------------------------- full sitting --- */
+/* The blocks of a sitting used to be siblings with no margin, so the score
+   panel's bottom edge landed exactly on the first card's top edge and its
+   shadow was drawn across it. One layout owns the rhythm now. */
+.full-exam-layout { display: grid; gap: var(--space-6); }
+
+/* A result form, laid out the way a band report is read: the four sections in
+   a row, the overall last and loudest. It is deliberately NOT a facsimile of
+   an official Test Report Form -- the note says what it is on screen and in
+   print, and nothing here carries anyone else's branding. */
+.result-form { display: grid; gap: var(--space-6); }
+.result-form-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-6); }
+.result-form-top h2 { margin-top: var(--space-2); }
+.result-form-meta {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4); margin: 0;
+  padding: var(--space-4) 0; border-top: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
+}
+.result-form-meta dt { font-size: 13px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-muted); }
+.result-form-meta dd { margin: var(--space-2) 0 0; font-size: 17px; font-weight: 700; }
+.result-form-id { font-variant-numeric: tabular-nums; letter-spacing: 1px; }
+.result-form-bands { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-3); }
+.result-form-band {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-4); border-radius: var(--radius-md);
+  background: var(--bg-band); text-align: center;
+}
+.result-form-band > span { font-size: 13px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-muted); }
+.result-form-band > strong { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.result-form-overall { background: var(--brand); color: var(--on-brand); }
+.result-form-overall > span, .result-form-overall > strong { color: inherit; }
+.result-form-overall > strong { font-size: 38px; }
+.result-form-pending {
+  padding: var(--space-4); border-radius: var(--radius-md);
+  background: var(--bg-band); color: var(--ink); font-weight: 600;
+}
+.result-form-note { font-size: 14px; font-weight: 600; color: var(--ink-muted); }
+
 .full-exam-stages {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6);
   list-style: none; padding: 0; margin: 0;
@@ -540,6 +578,9 @@ html[data-theme="dark"] {
   .panel, .target-card { padding: var(--space-4); }
   .skill-action h3, .skill-action p, .skill-action strong, .skill-empty, .skill-action .skill-cta, .skill-action .skill-icon { padding-left: var(--space-4); padding-right: var(--space-4); }
   .dashboard-next, .dashboard-next > div, .plan-heading > div, .full-test { flex-direction: column; align-items: flex-start; }
+  .result-form-bands { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .result-form-meta { grid-template-columns: 1fr; }
+  .result-form-overall { grid-column: 1 / -1; }
   .product-test-grid, .full-exam-stages, .checkout-layout, .profile-layout, .product-plan, .report-summary, .skeleton-grid, .skeleton-grid.tests { grid-template-columns: 1fr; }
   .product-login { grid-template-columns: 1fr; padding: var(--space-8) var(--space-4); gap: var(--space-8); }
   .login-skills { display: none; }
@@ -570,6 +611,20 @@ html[data-theme="dark"] {
   .product-body { max-width: none; padding: 0; }
   .result-row { break-inside: avoid; }
   .panel, .skill-action, .target-card { box-shadow: none; border: 1px solid #aaa; }
+
+  /* Printing a sitting means printing the result form. The stage cards and
+     the page furniture are screen navigation, not part of the report. */
+  .full-exam-layout > .page-heading, .full-exam-layout > .panel:not(.result-form),
+  .full-exam-stages, .full-exam-layout > .text-button { display: none !important; }
+  .result-form { break-inside: avoid; border: none; padding: 0; }
+  /* Declare the printed layout rather than inheriting whichever screen
+     breakpoint a paper width happens to fall into. */
+  .result-form-meta { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .result-form-bands { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .result-form-overall { grid-column: 1 / -1; }
+  .result-form-band { border: 1px solid #aaa; background: #fff; }
+  .result-form-overall { background: #111; color: #fff; }
+  .result-form-overall > span, .result-form-overall > strong { color: #fff; }
 }
 
 /* ------------------------------------------------------------- landing --- */

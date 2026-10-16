@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowRight, BookOpen, Check, Clock3, Headphones, Hourglass, Mic, PenLine } from 'lucide-react';
+import { ArrowRight, BookOpen, Check, Clock3, Headphones, Hourglass, Mic, PenLine, Printer } from 'lucide-react';
 import { api, type Sitting, type Stage } from '@/components/product/api';
 import { useProduct } from '@/components/product/product-context';
 import LoadingSkeleton from '@/components/product/loading-skeleton';
@@ -18,10 +18,25 @@ const ICONS: Record<string, typeof BookOpen> = {
  * is derived from the attempts themselves, so a candidate who refreshes, loses
  * the tab or returns on another device sees the same place in the exam.
  */
+/**
+ * A date on a report has to read the same everywhere.
+ *
+ * toLocaleDateString depends on the locale data the BROWSER happens to carry:
+ * a Chromium without Uzbek data rendered this as "2026 M10 16". A report
+ * number and a test date are not prose, so they are formatted here.
+ */
+function readable(iso: string) {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${date.getFullYear()}`;
+}
+
 export default function FullExamPage() {
   const router = useRouter();
   const { sessionId } = useParams<{ sessionId: string }>();
-  const { t, say, load } = useProduct();
+  const { t, say, load, user, displayName } = useProduct();
   const [sitting, setSitting] = useState<Sitting | null>(null);
   const [failed, setFailed] = useState('');
 
@@ -69,7 +84,7 @@ export default function FullExamPage() {
   }
 
   return (
-    <>
+    <div className="full-exam-layout">
       <div className="page-heading">
         <div>
           <span className="eyebrow">{say('TO‘LIQ IMTIHON', 'FULL EXAM', 'ПОЛНЫЙ ЭКЗАМЕН')}</span>
@@ -85,28 +100,67 @@ export default function FullExamPage() {
         <Link className="secondary" href="/dashboard/tests">{t.back}</Link>
       </div>
 
-      {sitting.overall_band !== null && (
-        <section className="panel full-exam-score">
-          <span className="eyebrow">{say('Umumiy band (taxminiy)', 'Overall band (estimate)', 'Общий балл (оценка)')}</span>
-          <strong className="band-figure">{sitting.overall_band.toFixed(1)}</strong>
-          <p className="product-muted">{sitting.note}</p>
-        </section>
-      )}
+      {done && (
+        <section className="panel result-form" aria-label={say('Natija varaqasi', 'Result form', 'Бланк результатов')}>
+          <header className="result-form-top">
+            <div>
+              <span className="eyebrow">{say('MASHQ NATIJASI', 'PRACTICE RESULT', 'РЕЗУЛЬТАТ ПРАКТИКИ')}</span>
+              <h2>IELTS Academic</h2>
+            </div>
+            <button className="secondary no-print" onClick={() => window.print()}>
+              <Printer size={16} />{say('PDF / chop etish', 'PDF / print', 'PDF / печать')}
+            </button>
+          </header>
 
-      {done && sitting.overall_band === null && (
-        <section className="panel">
-          <h2>{say('Umumiy band chiqarilmadi', 'No overall band', 'Общий балл не выставлен')}</h2>
-          {sitting.awaiting_assessment.length > 0 && (
-            <p>{say('Baholanmoqda: ', 'Being assessed: ', 'Оценивается: ') + sitting.awaiting_assessment.join(', ')}</p>
-          )}
-          {sitting.sections_without_band.length > 0 && (
-            <p className="product-muted">
-              {say(
-                `${sitting.sections_without_band.join(', ')} uchun band jadvali yo‘q — bu testlar to‘liq 40 savoldan iborat emas, shuning uchun faqat to‘g‘ri javoblar soni ko‘rsatiladi. To‘rttala bo‘limda band bo‘lmaguncha umumiy band chiqarilmaydi.`,
+          <dl className="result-form-meta">
+            <div>
+              <dt>{say('Nomzod', 'Candidate', 'Кандидат')}</dt>
+              <dd>{displayName || user?.email || '—'}</dd>
+            </div>
+            <div>
+              <dt>{say('Imtihon sanasi', 'Test date', 'Дата теста')}</dt>
+              <dd>{readable(sitting.started_at)}</dd>
+            </div>
+            <div>
+              <dt>{say('Hisobot raqami', 'Report number', 'Номер отчёта')}</dt>
+              <dd className="result-form-id">{sitting.id.slice(0, 8).toUpperCase()}</dd>
+            </div>
+          </dl>
+
+          <div className="result-form-bands">
+            {sitting.stages.map((stage) => (
+              <div key={stage.order} className="result-form-band">
+                <span>{stage.section}</span>
+                <strong>
+                  {stage.band !== null ? stage.band.toFixed(1)
+                    : stage.total ? `${stage.correct}/${stage.total}` : '—'}
+                </strong>
+              </div>
+            ))}
+            <div className="result-form-band result-form-overall">
+              <span>{say('Umumiy band', 'Overall band', 'Общий балл')}</span>
+              <strong>{sitting.overall_band !== null ? sitting.overall_band.toFixed(1) : '—'}</strong>
+            </div>
+          </div>
+
+          {sitting.overall_band === null && (
+            <p className="result-form-pending" role="status">
+              {sitting.awaiting_assessment.length > 0 && say(
+                `Umumiy band hali chiqarilmadi — baholanmoqda: ${sitting.awaiting_assessment.join(', ')}. Baho kelgach shu sahifada ko‘rinadi.`,
+                `No overall band yet — still being assessed: ${sitting.awaiting_assessment.join(', ')}. It appears here once the band arrives.`,
+                `Общий балл пока не выставлен — оценивается: ${sitting.awaiting_assessment.join(', ')}.`)}
+              {sitting.sections_without_band.length > 0 && ' ' + say(
+                `${sitting.sections_without_band.join(', ')} uchun band jadvali yo‘q: bu testlar to‘liq 40 savoldan iborat emas, shuning uchun faqat to‘g‘ri javoblar soni ko‘rsatiladi. Umumiy band to‘rttala bo‘limda ham band bo‘lgandagina chiqadi.`,
                 `${sitting.sections_without_band.join(', ')} has no band table: these papers are not the standard 40 questions, so only the raw score is shown. An overall band needs a band in all four sections.`,
                 `Для ${sitting.sections_without_band.join(', ')} нет таблицы: это не стандартные 40 вопросов, показан только сырой балл.`)}
             </p>
           )}
+
+          <p className="result-form-note">
+            {say('Bu — mashq natijasi. Rasmiy IELTS Test Report Form emas va rasmiy maqsadlarda ishlatilmaydi. Listening va Reading bandlari jadval bo‘yicha taxmin, Writing va Speaking bandlari AI tomonidan qo‘yilgan.',
+              'This is a practice result. It is not an official IELTS Test Report Form and cannot be used for any official purpose. Listening and Reading bands are table estimates; Writing and Speaking bands are given by AI.',
+              'Это результат практики, а не официальный IELTS Test Report Form. Баллы Listening и Reading — оценка по таблице; Writing и Speaking выставлены ИИ.')}
+          </p>
         </section>
       )}
 
@@ -166,10 +220,10 @@ export default function FullExamPage() {
       </ol>
 
       {!done && (
-        <button className="text-button" onClick={() => void abandon()}>
+        <button className="text-button no-print" onClick={() => void abandon()}>
           {say('Imtihonni to‘xtatish', 'Abandon this sitting', 'Прервать сессию')}
         </button>
       )}
-    </>
+    </div>
   );
 }
