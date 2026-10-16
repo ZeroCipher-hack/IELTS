@@ -93,7 +93,33 @@ const FINISHED = {
   ],
 };
 
+/**
+ * One account for the whole report group.
+ *
+ * The server allows ten registrations per IP in five minutes, and a suite
+ * that spends that budget on repetition starts answering 429 as soon as CI
+ * retries a single test. The cookies are carried over by hand rather than
+ * through test.use({ storageState }), which would also be resolved for the
+ * fixtures of the beforeAll that creates the file.
+ */
+let signedIn: Awaited<ReturnType<import('@playwright/test').BrowserContext['cookies']>> = [];
+
+test.beforeAll(async ({ browser }) => {
+  if (signedIn.length) return;
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.goto('/register');
+  await page.getByLabel(/ismingiz|name/i).fill('Report Tester');
+  await page.getByLabel(/email/i).fill(`report-${Date.now()}@example.com`);
+  await page.getByLabel(/parol|password/i).fill(PASSWORD);
+  await page.getByRole('button', { name: /hisob yaratish|register/i }).click();
+  await page.waitForURL(/dashboard/, { timeout: 20000 });
+  signedIn = await context.cookies();
+  await context.close();
+});
+
 async function openReport(page: import('@playwright/test').Page, sitting: unknown) {
+  await page.context().addCookies(signedIn);
   await page.route(`**/api/sessions/${FINISHED.id}/`, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(sitting) }));
   await page.goto(`/dashboard/full/${FINISHED.id}`);
@@ -104,38 +130,28 @@ test('a finished sitting shows a result form', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
 
-  await page.goto('/register');
-  await page.getByLabel(/ismingiz|name/i).fill('Report Tester');
-  await page.getByLabel(/email/i).fill(`report-${Date.now()}@example.com`);
-  await page.getByLabel(/parol|password/i).fill(PASSWORD);
-  await page.getByRole('button', { name: /hisob yaratish|register/i }).click();
-  await page.waitForURL(/dashboard/, { timeout: 20000 });
-
   await openReport(page, FINISHED);
   const form = page.locator('.result-form');
 
+  // Four sections in a row; the overall band is the seal, set apart from them.
   await expect(form.locator('.result-form-band > span')).toHaveText(
-    ['LISTENING', 'READING', 'WRITING', 'SPEAKING', 'Umumiy band'],
+    ['LISTENING', 'READING', 'WRITING', 'SPEAKING'],
     { useInnerText: true, ignoreCase: true });
   await expect(form.locator('.result-form-band > strong')).toHaveText(
-    ['7.0', '7.0', '6.0', '6.0', '6.5']);
+    ['7.0', '7.0', '6.0', '6.0']);
+  await expect(form.locator('.result-form-overall strong')).toHaveText('6.5');
 
   // The date is formatted here, not by whatever locale data the browser has.
   await expect(form.getByText('04.03.2026')).toBeVisible();
   await expect(form.getByText('Report Tester')).toBeVisible();
   await expect(form.getByText(/Rasmiy IELTS Test Report Form emas/)).toBeVisible();
+  // The product's own mark, and no one else's.
+  await expect(form.locator('.result-form-brand')).toContainText('IELTSQA');
 
   expect(errors, errors.join('\n')).toEqual([]);
 });
 
 test('an unassessed section withholds the overall band and says why', async ({ page }) => {
-  await page.goto('/register');
-  await page.getByLabel(/ismingiz|name/i).fill('Pending Tester');
-  await page.getByLabel(/email/i).fill(`pending-${Date.now()}@example.com`);
-  await page.getByLabel(/parol|password/i).fill(PASSWORD);
-  await page.getByRole('button', { name: /hisob yaratish|register/i }).click();
-  await page.waitForURL(/dashboard/, { timeout: 20000 });
-
   await openReport(page, {
     ...FINISHED,
     overall_band: null,
@@ -148,13 +164,6 @@ test('an unassessed section withholds the overall band and says why', async ({ p
 });
 
 test('a paper with no band table shows its raw score instead', async ({ page }) => {
-  await page.goto('/register');
-  await page.getByLabel(/ismingiz|name/i).fill('Raw Tester');
-  await page.getByLabel(/email/i).fill(`raw-${Date.now()}@example.com`);
-  await page.getByLabel(/parol|password/i).fill(PASSWORD);
-  await page.getByRole('button', { name: /hisob yaratish|register/i }).click();
-  await page.waitForURL(/dashboard/, { timeout: 20000 });
-
   await openReport(page, {
     ...FINISHED,
     overall_band: null,
@@ -169,13 +178,6 @@ test('a paper with no band table shows its raw score instead', async ({ page }) 
 });
 
 test('printing a sitting yields the report alone', async ({ page }) => {
-  await page.goto('/register');
-  await page.getByLabel(/ismingiz|name/i).fill('Print Tester');
-  await page.getByLabel(/email/i).fill(`print-${Date.now()}@example.com`);
-  await page.getByLabel(/parol|password/i).fill(PASSWORD);
-  await page.getByRole('button', { name: /hisob yaratish|register/i }).click();
-  await page.waitForURL(/dashboard/, { timeout: 20000 });
-
   await openReport(page, FINISHED);
   await page.emulateMedia({ media: 'print' });
   for (const selector of ['.site-header', '.full-exam-stages', '.result-form .no-print',
@@ -185,4 +187,17 @@ test('printing a sitting yields the report alone', async ({ page }) => {
   }
   await expect(page.locator('.result-form')).toBeVisible();
   await expect(page.locator('.result-form-overall strong')).toHaveText('6.5');
+
+  // The certificate keeps its frame and its margins on paper: an earlier
+  // print rule stripped both, so the bands sat flush against the frame.
+  const frame = await page.locator('.result-form').evaluate((el) => {
+    const style = getComputedStyle(el);
+    return { border: style.borderTopStyle, padLeft: parseFloat(style.paddingLeft),
+             adjust: style.printColorAdjust };
+  });
+  expect(frame.border).not.toBe('none');
+  expect(frame.padLeft).toBeGreaterThan(20);
+  // Without this a print dialog drops background graphics and the frame,
+  // the ground and the seal all come out blank.
+  expect(frame.adjust).toBe('exact');
 });

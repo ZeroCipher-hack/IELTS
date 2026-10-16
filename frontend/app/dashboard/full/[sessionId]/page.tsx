@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowRight, BookOpen, Check, Clock3, Headphones, Hourglass, Mic, PenLine, Printer } from 'lucide-react';
+import { ArrowRight, AudioLines, BookOpen, Check, Clock3, Headphones, Hourglass, Mic, PenLine, Printer } from 'lucide-react';
 import { api, type Sitting, type Stage } from '@/components/product/api';
 import { useProduct } from '@/components/product/product-context';
 import LoadingSkeleton from '@/components/product/loading-skeleton';
@@ -103,20 +103,25 @@ export default function FullExamPage() {
       {done && (
         <section className="panel result-form" aria-label={say('Natija varaqasi', 'Result form', 'Бланк результатов')}>
           <header className="result-form-top">
-            <div>
-              <span className="eyebrow">{say('MASHQ NATIJASI', 'PRACTICE RESULT', 'РЕЗУЛЬТАТ ПРАКТИКИ')}</span>
-              <h2>IELTS Academic</h2>
-            </div>
+            <span className="result-form-brand">
+              <AudioLines size={28} aria-hidden="true" />IELTS<span>QA</span>
+            </span>
             <button className="secondary no-print" onClick={() => window.print()}>
               <Printer size={16} />{say('PDF / chop etish', 'PDF / print', 'PDF / печать')}
             </button>
           </header>
 
+          <div className="result-form-body">
+          <div className="result-form-title">
+            <span className="eyebrow">{say('MASHQ NATIJASI VARAQASI', 'PRACTICE RESULT FORM', 'БЛАНК РЕЗУЛЬТАТА ПРАКТИКИ')}</span>
+            <h2>IELTS Academic</h2>
+            <p>{say('To‘rtta bo‘lim bir sessiyada topshirildi',
+              'Four sections taken in one sitting', 'Четыре раздела за одну сессию')}</p>
+          </div>
+
+          <p className="result-form-candidate">{displayName || user?.email || '—'}</p>
+
           <dl className="result-form-meta">
-            <div>
-              <dt>{say('Nomzod', 'Candidate', 'Кандидат')}</dt>
-              <dd>{displayName || user?.email || '—'}</dd>
-            </div>
             <div>
               <dt>{say('Imtihon sanasi', 'Test date', 'Дата теста')}</dt>
               <dd>{readable(sitting.started_at)}</dd>
@@ -124,6 +129,10 @@ export default function FullExamPage() {
             <div>
               <dt>{say('Hisobot raqami', 'Report number', 'Номер отчёта')}</dt>
               <dd className="result-form-id">{sitting.id.slice(0, 8).toUpperCase()}</dd>
+            </div>
+            <div>
+              <dt>{say('Bo‘limlar', 'Sections', 'Разделы')}</dt>
+              <dd>{sitting.stages.length} / 4</dd>
             </div>
           </dl>
 
@@ -137,10 +146,12 @@ export default function FullExamPage() {
                 </strong>
               </div>
             ))}
-            <div className="result-form-band result-form-overall">
-              <span>{say('Umumiy band', 'Overall band', 'Общий балл')}</span>
-              <strong>{sitting.overall_band !== null ? sitting.overall_band.toFixed(1) : '—'}</strong>
-            </div>
+          </div>
+
+          <div className="result-form-overall">
+            <span>{say('Umumiy band', 'Overall band', 'Общий балл')}</span>
+            <strong>{sitting.overall_band !== null ? sitting.overall_band.toFixed(1) : '—'}</strong>
+            <small>{say('taxminiy', 'estimate', 'оценка')}</small>
           </div>
 
           {sitting.overall_band === null && (
@@ -156,11 +167,19 @@ export default function FullExamPage() {
             </p>
           )}
 
+          </div>
+
+          <footer className="result-form-foot">
           <p className="result-form-note">
             {say('Bu — mashq natijasi. Rasmiy IELTS Test Report Form emas va rasmiy maqsadlarda ishlatilmaydi. Listening va Reading bandlari jadval bo‘yicha taxmin, Writing va Speaking bandlari AI tomonidan qo‘yilgan.',
               'This is a practice result. It is not an official IELTS Test Report Form and cannot be used for any official purpose. Listening and Reading bands are table estimates; Writing and Speaking bands are given by AI.',
               'Это результат практики, а не официальный IELTS Test Report Form. Баллы Listening и Reading — оценка по таблице; Writing и Speaking выставлены ИИ.')}
           </p>
+          <p className="result-form-issuer">
+            IELTSQA · {say('Mustaqil IELTS mashq platformasi', 'Independent IELTS practice platform',
+              'Независимая платформа подготовки к IELTS')}
+          </p>
+          </footer>
         </section>
       )}
 
