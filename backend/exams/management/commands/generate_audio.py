@@ -12,6 +12,7 @@ audio is never overwritten unless --replace is given.
 import re
 import time
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand, CommandError
@@ -19,7 +20,7 @@ from django.core.management.base import BaseCommand, CommandError
 from exams.gemini import AIError, configured
 from exams.models import Exam
 from exams.services import duplicate_exam, validate_exam
-from exams.tts import EXAMINER_VOICE, SAMPLE_RATE, speak
+from exams.tts import EXAMINER_VOICE, SAMPLE_RATE, compress, speak
 
 # The transcript is stored for human reference and opens with a header line
 # plus Uzbek framing; neither belongs in the recording.
@@ -34,6 +35,12 @@ DEFAULT_DELAY = 20.0
 # malformed reply, a bad model name or an exhausted daily quota.
 RETRYABLE = {'AI_RATE_LIMIT', 'AI_UNAVAILABLE'}
 
+# IELTS Listening is spoken at roughly 140-150 words a minute. Outside this
+# band the recording is not the exam the candidate is preparing for.
+PACE_TARGET = '140-150'
+PACE_SLOW = 110
+PACE_FAST = 180
+
 # Pace is not a detail. A candidate who fails because the recording outran
 # them failed at nothing the exam is meant to measure. Official IELTS
 # Listening runs at roughly 140-150 words a minute; a model left to its own
@@ -46,11 +53,11 @@ EXAMINER_STYLE = (
 )
 NARRATOR_STYLE = (
     'You are recording the audio for an official IELTS Listening test. Read '
-    'the passage below aloud slowly and very clearly, at about 140 words per '
-    'minute -- noticeably slower than ordinary conversation, so a candidate '
-    'can write answers while listening. Pause for about one second between '
-    'sentences and about two seconds between paragraphs. Read only the words '
-    'given, and do not add anything:\n\n'
+    'the passage below aloud clearly and steadily, at the natural pace of a '
+    'news presenter -- about 145 words per minute. Do NOT read slowly or '
+    'drag out the words; an IELTS recording is spoken at ordinary speed, just '
+    'clearly. Keep normal sentence rhythm and do not add extra pauses. '
+    'Read only the words given, and do not add anything:\n\n'
 )
 
 
@@ -240,8 +247,9 @@ class Command(BaseCommand):
                 if self.exhausted:
                     break
                 continue
-            question.audio_file.save(f'q{exam.id}-{question.position}.wav',
-                                     ContentFile(audio), save=True)
+            stored, extension = compress(audio)
+            question.audio_file.save(f'q{exam.id}-{question.position}.{extension}',
+                                     ContentFile(stored), save=True)
             made += 1
         return made, failed
 
@@ -256,16 +264,39 @@ class Command(BaseCommand):
         audio = self.generate(text, NARRATOR_STYLE, options['voice'], 'transkript', options)
         if audio is None:
             return 0, 1
-        exam.audio_file.save(f'listening-{exam.id}.wav', ContentFile(audio), save=True)
-        self.report_pace(audio, text)
+        stored, extension = compress(audio)
+        exam.audio_file.save(f'listening-{exam.id}.{extension}', ContentFile(stored), save=True)
+        # Pace is measured on the WAV, whose length is exact; size on what is served.
+        self.report_pace(audio, text, len(stored))
         if not options['publish']:
             self.stdout.write('   Endi admin panelda «Tekshirish va nashr qilish» amalini ishlating.')
         return 1, 0
 
-    def report_pace(self, audio, text):
-        """Say out loud how fast the recording is, because too fast is unusable."""
+    def report_pace(self, audio, text, size):
+        """Report the reading speed and the file size, and judge BOTH ends.
+
+        An earlier version only guarded against a recording that raced, and so
+        passed one read at 66 words a minute -- half IELTS pace -- as fine. A
+        recording that drags is just as unusable: it is not the exam the
+        candidate is preparing for, and it is twice the download.
+        """
         seconds = max(1, (len(audio) - 44) / (SAMPLE_RATE * 2))
         wpm = round(len(text.split()) / (seconds / 60))
-        verdict = self.style.SUCCESS('IELTS tezligiga yaqin') if wpm <= 175 else self.style.WARNING(
-            'JUDA TEZ — IELTS ~140-150 so‘z/daqiqa. Eshitib ko‘ring; kerak bo‘lsa --replace bilan qayta yarating')
-        self.stdout.write(f'   davomiyligi {int(seconds)}s, taxminan {wpm} so‘z/daqiqa — {verdict}')
+        again = ' Eshitib ko‘ring va --replace bilan qayta yarating.'
+        if wpm < PACE_SLOW:
+            verdict = self.style.ERROR(f'JUDA SEKIN — IELTS ~{PACE_TARGET} so‘z/daqiqa.' + again)
+        elif wpm > PACE_FAST:
+            verdict = self.style.ERROR(f'JUDA TEZ — IELTS ~{PACE_TARGET} so‘z/daqiqa.' + again)
+        else:
+            verdict = self.style.SUCCESS('IELTS tezligiga yaqin')
+        self.stdout.write(
+            f'   davomiyligi {int(seconds // 60)}:{int(seconds % 60):02d}, '
+            f'taxminan {wpm} so‘z/daqiqa — {verdict}')
+
+        ceiling = settings.EXAM_AUDIO_MAX_BYTES
+        self.stdout.write(f'   fayl hajmi {size // 1024 // 1024} MB')
+        if size > ceiling * 0.8:
+            self.stdout.write(self.style.WARNING(
+                f'   DIQQAT: chegara {ceiling // 1024 // 1024} MB ga yaqin. '
+                'ffmpeg o‘rnatilsa fayl MP3 ga siqiladi va ~6 barobar kichrayadi: '
+                'sudo apt install ffmpeg'))

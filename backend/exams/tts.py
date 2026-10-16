@@ -12,6 +12,9 @@ TTS models return. No credential, prompt or provider message is logged.
 import base64
 import io
 import re
+import shutil
+import subprocess
+import tempfile
 import wave
 
 from django.conf import settings
@@ -129,3 +132,34 @@ def _pcm(text, voice, style):
     if len(pcm) < SAMPLE_RATE // 2:
         raise AIError('AI_TTS_NO_AUDIO')
     return pcm
+
+
+def compress(wav, kbps=64):
+    """Return (bytes, extension): MP3 when ffmpeg is here, else the WAV.
+
+    A 24 kHz 16-bit WAV costs 48 KB a second, so a Listening recording runs to
+    tens of megabytes -- near the upload ceiling, and a cruel download for a
+    candidate on mobile data. Speech at 64 kbps mono is indistinguishable here
+    and roughly a tenth of the size. Falling back to WAV is fine; it only
+    costs bandwidth, so a missing ffmpeg must never fail the run.
+    """
+    if not shutil.which('ffmpeg'):
+        return wav, 'wav'
+    with tempfile.TemporaryDirectory() as folder:
+        source = f'{folder}/in.wav'
+        target = f'{folder}/out.mp3'
+        with open(source, 'wb') as handle:
+            handle.write(wav)
+        try:
+            subprocess.run(
+                ['ffmpeg', '-nostdin', '-loglevel', 'error', '-y', '-i', source,
+                 '-ac', '1', '-codec:a', 'libmp3lame', '-b:a', f'{int(kbps)}k', target],
+                check=True, capture_output=True, timeout=600)
+            with open(target, 'rb') as handle:
+                data = handle.read()
+        except (subprocess.SubprocessError, OSError):
+            return wav, 'wav'
+    # Trust the result only if it is plausible: smaller, and not empty.
+    if not data.startswith((b'ID3', b'\xff\xfb', b'\xff\xf3', b'\xff\xf2')) or not 0 < len(data) < len(wav):
+        return wav, 'wav'
+    return data, 'mp3'

@@ -267,7 +267,22 @@ Listening'ni tugatish uchun audio kerak:
 .venv/bin/python manage.py generate_audio --section Listening --publish
 ```
 
-Buyruq audioning **tezligini ham aytadi**. IELTS Listening ~140–150 so'z/daqiqa. Agar «JUDA TEZ» deb chiqsa, eshitib ko'ring va kerak bo'lsa `--replace` bilan qayta yarating — juda tez audio talabani Listening'da emas, tezlikda yiqitadi.
+Buyruq audioning **tezligini va hajmini aytadi**:
+
+```
+davomiyligi 6:28, taxminan 145 so'z/daqiqa — IELTS tezligiga yaqin
+fayl hajmi 3 MB
+```
+
+IELTS Listening ~140–150 so'z/daqiqa. `JUDA TEZ` yoki `JUDA SEKIN` chiqsa, eshitib ko'ring va `--replace` bilan qayta yarating. Ikkalasi ham yomon: tez bo'lsa talaba ulgurmaydi, sekin bo'lsa bu haqiqiy imtihonga tayyorlamaydi.
+
+**ffmpeg o'rnating** — fayl MP3 ga siqiladi va ~6 barobar kichrayadi:
+
+```bash
+sudo apt install ffmpeg
+```
+
+Usiz WAV saqlanadi: bir xil ovoz, lekin 40 MB atrofida. Bu yuklash chegarasiga yaqin va mobil internetdagi talaba uchun og'ir.
 
 ### Limit (`AI_RATE_LIMIT`) chiqsa
 

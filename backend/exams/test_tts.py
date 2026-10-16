@@ -247,14 +247,105 @@ class PaceReportTests(TestCase):
         return out.getvalue()
 
     def test_an_exam_paced_recording_passes(self):
-        output = self.run_with(words=140, seconds=60)
-        self.assertIn('140 so‘z/daqiqa', output)
+        output = self.run_with(words=145, seconds=60)
+        self.assertIn('145 so‘z/daqiqa', output)
         self.assertIn('IELTS tezligiga yaqin', output)
 
     def test_a_racing_recording_is_called_out(self):
         output = self.run_with(words=280, seconds=60)
         self.assertIn('JUDA TEZ', output)
         self.assertIn('--replace', output)
+
+    def test_a_dragging_recording_is_called_out_too(self):
+        """A real run read at 66 wpm -- half IELTS pace -- and was passed as
+        fine, because only the fast end was ever checked."""
+        output = self.run_with(words=66, seconds=60)
+        self.assertIn('66 so‘z/daqiqa', output)
+        self.assertIn('JUDA SEKIN', output)
+        self.assertNotIn('yaqin', output)
+        self.assertIn('--replace', output)
+
+    def test_both_edges_of_the_accepted_band(self):
+        from exams.management.commands.generate_audio import PACE_FAST, PACE_SLOW
+        for wpm in (PACE_SLOW, PACE_FAST):
+            with self.subTest(wpm=wpm):
+                self.assertIn('IELTS tezligiga yaqin', self.run_with(words=wpm, seconds=60))
+        for wpm in (PACE_SLOW - 1, PACE_FAST + 1):
+            with self.subTest(wpm=wpm):
+                self.assertNotIn('IELTS tezligiga yaqin', self.run_with(words=wpm, seconds=60))
+
+    def test_a_file_near_the_upload_ceiling_is_flagged(self):
+        from django.conf import settings
+        ceiling = settings.EXAM_AUDIO_MAX_BYTES
+        from exams.tts import SAMPLE_RATE
+        seconds = int(ceiling * 0.95) // (SAMPLE_RATE * 2)
+        output = self.run_with(words=145 * seconds // 60, seconds=seconds)
+        self.assertIn('DIQQAT', output)
+        self.assertIn('ffmpeg', output)
+
+
+class CompressTests(TestCase):
+    """A 40 MB WAV is a cruel download; MP3 is the same speech a tenth the size."""
+
+    def wav(self, seconds=3):
+        import math
+        import struct
+        from exams.tts import SAMPLE_RATE
+        buffer = io.BytesIO()
+        with wave.open(buffer, 'wb') as out:
+            out.setnchannels(1)
+            out.setsampwidth(2)
+            out.setframerate(SAMPLE_RATE)
+            out.writeframes(b''.join(struct.pack('<h', int(8000 * math.sin(i / 18.0)))
+                                     for i in range(SAMPLE_RATE * seconds)))
+        return buffer.getvalue()
+
+    def test_a_recording_is_made_much_smaller(self):
+        from exams.tts import compress
+        source = self.wav()
+        data, extension = compress(source)
+        if extension == 'wav':
+            self.skipTest('ffmpeg is not installed in this environment')
+        self.assertEqual(extension, 'mp3')
+        self.assertLess(len(data), len(source) / 3)
+
+    def test_without_ffmpeg_the_wav_is_kept_rather_than_failing(self):
+        from exams.tts import compress
+        source = self.wav()
+        with patch('exams.tts.shutil.which', return_value=None):
+            data, extension = compress(source)
+        self.assertEqual((data, extension), (source, 'wav'))
+
+    def test_a_failed_encode_falls_back_instead_of_storing_rubbish(self):
+        import subprocess
+        from exams.tts import compress
+        source = self.wav()
+        with patch('exams.tts.shutil.which', return_value='/usr/bin/ffmpeg'), \
+                patch('exams.tts.subprocess.run',
+                      side_effect=subprocess.CalledProcessError(1, 'ffmpeg')):
+            self.assertEqual(compress(source), (source, 'wav'))
+
+    def test_an_implausible_result_is_rejected(self):
+        """An empty or non-MP3 output must never be stored as the exam audio."""
+        from exams.tts import compress
+        source = self.wav()
+
+        def write_rubbish(args, **kwargs):
+            with open(args[-1], 'wb') as handle:
+                handle.write(b'')
+            return subprocess.CompletedProcess(args, 0)
+
+        import subprocess
+        with patch('exams.tts.shutil.which', return_value='/usr/bin/ffmpeg'), \
+                patch('exams.tts.subprocess.run', side_effect=write_rubbish):
+            self.assertEqual(compress(source), (source, 'wav'))
+
+    def test_the_stored_file_is_named_by_what_it_actually_is(self):
+        from exams.tts import compress
+        _, extension = compress(self.wav())
+        self.assertIn(extension, ('mp3', 'wav'))
+        from django.conf import settings
+        self.assertIn(extension, settings.EXAM_AUDIO_EXTENSIONS)
 
 
 class SplitTests(TestCase):
