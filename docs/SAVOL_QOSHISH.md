@@ -274,7 +274,25 @@ davomiyligi 6:28, taxminan 145 so'z/daqiqa — IELTS tezligiga yaqin
 fayl hajmi 3 MB
 ```
 
-IELTS Listening ~140–150 so'z/daqiqa. `JUDA TEZ` yoki `JUDA SEKIN` chiqsa, eshitib ko'ring va `--replace` bilan qayta yarating. Ikkalasi ham yomon: tez bo'lsa talaba ulgurmaydi, sekin bo'lsa bu haqiqiy imtihonga tayyorlamaydi.
+IELTS Listening ~140–150 so'z/daqiqa. **Tezlik avtomatik to'g'rilanadi** — buyruq o'lchaydi va chegaradan chiqsa ffmpeg bilan aniq 145 ga keltiradi, ovoz balandligi o'zgarmaydi:
+
+```
+tezlik to'g'rilandi: 187 → 145 so'z/daqiqa
+```
+
+Modeldan tezlikni so'rash ishonchsiz: bir xil ko'rsatma bir kuni 66, boshqa kuni 187 so'z/daqiqa berdi. Shuning uchun so'ramaymiz — o'lchaymiz va to'g'rilaymiz.
+
+To'g'rilab bo'lmasa (ffmpeg yo'q), **test nashr qilinmaydi**. Buyruq o'zi «yaroqsiz» degan audioni talabaga ko'rsatmaydi.
+
+### Tayyor audioning tezligini tuzatish
+
+Allaqachon yaratilgan yozuvni qayta yaratmasdan tuzatish mumkin. **Bu bitta ham so'rov sarflamaydi va kalit ham kerak emas:**
+
+```bash
+.venv/bin/python manage.py generate_audio --exam 18 --retime
+```
+
+Kvota tugaganda qo'lingizdan keladigan yagona ish — shu.
 
 **ffmpeg o'rnating** — fayl MP3 ga siqiladi va ~6 barobar kichrayadi:
 
@@ -310,8 +328,10 @@ Bunday holatda:
 Nashr qilingan test o'zgarmas. Buyruq uni **nusxalab**, nusxaga audio qo'yadi va kerak bo'lsa nashr qiladi:
 
 ```bash
-.venv/bin/python manage.py generate_audio --section Speaking --duplicate --publish
+.venv/bin/python manage.py generate_audio --exam 10 --duplicate --publish
 ```
+
+`--duplicate` **qaysi testga tegishli ekanini aytishni talab qiladi** (`--exam <id>`). Bo'limdagi hamma testga tegishli bo'lsa `--all` qo'shasiz — lekin bilib qo'ying: har biri alohida so'rov yeydi va alohida nashr qilingan test yaratadi.
 
 Eski versiya joyida qoladi va ishlayotgan urinishlar buzilmaydi. To'liq imtihon har doim eng yangi nashr qilingan testni oladi, shuning uchun yangi versiya avtomatik ishlatiladi.
 

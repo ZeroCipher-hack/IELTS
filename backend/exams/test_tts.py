@@ -184,7 +184,7 @@ class PublishedExamAudioTests(TestCase):
     def test_duplicate_leaves_the_live_exam_untouched(self):
         live = self.speaking()
         with patch('exams.management.commands.generate_audio.speak', return_value=b'RIFFfake'):
-            self.run_command(duplicate=True)
+            self.run_command(duplicate=True, all=True)
         live.refresh_from_db()
         self.assertTrue(live.published)
         self.assertFalse(any(q.audio_file for q in live.questions.all()),
@@ -198,7 +198,7 @@ class PublishedExamAudioTests(TestCase):
     def test_publish_makes_the_new_version_the_live_one(self):
         live = self.speaking()
         with patch('exams.management.commands.generate_audio.speak', return_value=b'RIFFfake'):
-            output = self.run_command(duplicate=True, publish=True)
+            output = self.run_command(duplicate=True, all=True, publish=True)
         self.assertIn('nashr qilindi', output)
         newest = Exam.objects.filter(section='Speaking', published=True).order_by('-id').first()
         self.assertNotEqual(newest.pk, live.pk)
@@ -507,14 +507,14 @@ class ResumeTests(TestCase):
 
         with patch('exams.management.commands.generate_audio.speak', side_effect=answer), \
                 patch('exams.management.commands.generate_audio.time.sleep'):
-            self.run_command(duplicate=True, retries=0)
+            self.run_command(duplicate=True, all=True, retries=0)
         drafts = Exam.objects.filter(published=False)
         self.assertEqual(drafts.count(), 1)
         self.assertEqual(sum(1 for q in drafts.get().questions.all() if q.audio_file), 1)
 
         with patch('exams.management.commands.generate_audio.speak', return_value=b'RIFF2'), \
                 patch('exams.management.commands.generate_audio.time.sleep'):
-            output = self.run_command(duplicate=True)
+            output = self.run_command(duplicate=True, all=True)
         self.assertIn('davom ettirilmoqda', output)
         self.assertEqual(Exam.objects.filter(published=False).count(), 1,
                          'a second copy would strand the audio already paid for')
@@ -531,7 +531,7 @@ class ResumeTests(TestCase):
         question = partial.questions.first()
         question.audio_file.save('x.wav', ContentFile(b'RIFF'), save=True)
         with patch('exams.management.commands.generate_audio.speak', return_value=b'RIFFnew'):
-            output = self.run_command(duplicate=True)
+            output = self.run_command(duplicate=True, all=True)
         self.assertIn(f'#{partial.id}', output)
         self.assertNotIn(f'davom ettirilmoqda\n\n#{empty.id}', output)
         empty.refresh_from_db()
@@ -693,3 +693,228 @@ class DailyQuotaTests(TestCase):
             self.run_command()
         exam = Exam.objects.get()
         self.assertTrue(all(q.audio_file for q in exam.questions.all()))
+
+
+@override_settings(MEDIA_ROOT=MEDIA, AI_ENABLED=True, GEMINI_API_KEY='k')
+class PaceCorrectionTests(TestCase):
+    """Asking the model for a pace does not work. Measuring and fixing does."""
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def listening(self, words=145, published=False):
+        exam = Exam.objects.create(title='L', section='Listening', duration_seconds=900,
+                                   passage=' '.join(['word'] * words), published=published)
+        Question.objects.create(exam=exam, position=1, prompt='Q', accepted_answers=['yes'])
+        return exam
+
+    def wav(self, seconds):
+        from exams.tts import SAMPLE_RATE
+        return b'RIFF' + b'\0' * 40 + b'\0' * (SAMPLE_RATE * 2 * seconds)
+
+    def run_command(self, **kwargs):
+        out = io.StringIO()
+        kwargs.setdefault('delay', 0)
+        call_command('generate_audio', stdout=out, stderr=out, **kwargs)
+        return out.getvalue()
+
+    def test_a_racing_recording_is_slowed_to_the_target(self):
+        """187 wpm came back from a real run after the prompt was retuned."""
+        self.listening(words=187)
+        with patch('exams.management.commands.generate_audio.speak', return_value=self.wav(60)), \
+                patch('exams.management.commands.generate_audio.retime',
+                      return_value=(b'ID3fixed-audio-payload' + b'x' * 2000, 'mp3')) as fixed, \
+                patch('exams.management.commands.generate_audio.duration', return_value=60 * 187 / 145):
+            output = self.run_command()
+        speed = fixed.call_args.args[2]
+        self.assertAlmostEqual(speed, 145 / 187, places=3)
+        self.assertLess(speed, 1, 'a recording that races must be PLAYED SLOWER')
+        self.assertIn('tezlik to‘g‘rilandi', output)
+        self.assertIn('187 → 145', output)
+
+    def test_a_dragging_recording_is_sped_up(self):
+        self.listening(words=66)
+        with patch('exams.management.commands.generate_audio.speak', return_value=self.wav(60)), \
+                patch('exams.management.commands.generate_audio.retime',
+                      return_value=(b'ID3fixed' + b'x' * 2000, 'mp3')) as fixed, \
+                patch('exams.management.commands.generate_audio.duration', return_value=60 * 66 / 145):
+            self.run_command()
+        speed = fixed.call_args.args[2]
+        self.assertAlmostEqual(speed, 145 / 66, places=3)
+        self.assertGreater(speed, 1, 'a recording that drags must be PLAYED FASTER')
+
+    def test_a_recording_already_in_the_band_is_left_alone(self):
+        self.listening(words=145)
+        with patch('exams.management.commands.generate_audio.speak', return_value=self.wav(60)), \
+                patch('exams.management.commands.generate_audio.retime') as fixed:
+            output = self.run_command()
+        fixed.assert_not_called()
+        self.assertIn('IELTS tezligiga yaqin', output)
+
+    def test_audio_that_cannot_be_corrected_is_not_published(self):
+        """It would be published over the command's own objection."""
+        exam = self.listening(words=187)
+        with patch('exams.management.commands.generate_audio.speak', return_value=self.wav(60)), \
+                patch('exams.management.commands.generate_audio.retime',
+                      side_effect=lambda data, ext, factor: (data, ext)):
+            output = self.run_command(publish=True)
+        exam.refresh_from_db()
+        self.assertFalse(exam.published)
+        self.assertIn('nashr qilinmadi', output)
+        self.assertIn('ffmpeg', output)
+
+    def test_a_corrected_recording_is_published(self):
+        exam = self.listening(words=187)
+        with patch('exams.management.commands.generate_audio.speak', return_value=self.wav(60)), \
+                patch('exams.management.commands.generate_audio.retime',
+                      return_value=(b'ID3fixed' + b'x' * 2000, 'mp3')), \
+                patch('exams.management.commands.generate_audio.duration', return_value=60 * 187 / 145):
+            output = self.run_command(publish=True)
+        exam.refresh_from_db()
+        self.assertTrue(exam.published)
+        self.assertIn('nashr qilindi', output)
+
+
+@override_settings(MEDIA_ROOT=MEDIA, AI_ENABLED=True, GEMINI_API_KEY='k')
+class RetimeExistingTests(TestCase):
+    """Fixing a recording already made must cost no provider request."""
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def listening(self, words=187):
+        exam = Exam.objects.create(title='L', section='Listening', duration_seconds=900,
+                                   passage=' '.join(['word'] * words))
+        Question.objects.create(exam=exam, position=1, prompt='Q', accepted_answers=['yes'])
+        exam.audio_file.save('existing.mp3', ContentFile(b'ID3' + b'x' * 4000), save=True)
+        return exam
+
+    def run_command(self, **kwargs):
+        out = io.StringIO()
+        kwargs.setdefault('delay', 0)
+        call_command('generate_audio', stdout=out, stderr=out, **kwargs)
+        return out.getvalue()
+
+    def test_retiming_calls_the_provider_not_at_all(self):
+        self.listening()
+        with patch('exams.management.commands.generate_audio.speak') as spoke, \
+                patch('exams.management.commands.generate_audio.duration', side_effect=[60.0, 60 * 187 / 145]), \
+                patch('exams.management.commands.generate_audio.retime',
+                      return_value=(b'ID3fixed' + b'x' * 2000, 'mp3')):
+            output = self.run_command(retime=True)
+        spoke.assert_not_called()
+        self.assertIn('tezlik to‘g‘rilandi', output)
+
+    def test_the_corrected_file_replaces_the_old_one(self):
+        exam = self.listening()
+        with patch('exams.management.commands.generate_audio.duration', side_effect=[60.0, 60 * 187 / 145]), \
+                patch('exams.management.commands.generate_audio.retime',
+                      return_value=(b'ID3fixed' + b'x' * 2000, 'mp3')):
+            self.run_command(retime=True)
+        exam.refresh_from_db()
+        exam.audio_file.open('rb')
+        try:
+            self.assertTrue(exam.audio_file.read().startswith(b'ID3fixed'))
+        finally:
+            exam.audio_file.close()
+
+    def test_an_exam_already_in_the_band_is_untouched(self):
+        exam = Exam.objects.create(title='L', section='Listening', duration_seconds=900,
+                                   passage=' '.join(['word'] * 145))
+        Question.objects.create(exam=exam, position=1, prompt='Q', accepted_answers=['yes'])
+        exam.audio_file.save('ok.mp3', ContentFile(b'ID3' + b'x' * 4000), save=True)
+        name = exam.audio_file.name
+        with patch('exams.management.commands.generate_audio.duration', return_value=60.0), \
+                patch('exams.management.commands.generate_audio.retime') as fixed:
+            output = self.run_command(retime=True)
+        fixed.assert_not_called()
+        exam.refresh_from_db()
+        self.assertEqual(exam.audio_file.name, name)
+        self.assertIn('IELTS tezligiga yaqin', output)
+
+    def test_without_ffprobe_it_says_so_rather_than_guessing(self):
+        self.listening()
+        with patch('exams.management.commands.generate_audio.duration', return_value=None):
+            output = self.run_command(retime=True)
+        self.assertIn('ffmpeg', output)
+
+    def test_an_exam_with_no_audio_is_reported(self):
+        exam = Exam.objects.create(title='L', section='Listening', duration_seconds=900,
+                                   passage='word ' * 145)
+        Question.objects.create(exam=exam, position=1, prompt='Q', accepted_answers=['yes'])
+        output = self.run_command(retime=True)
+        self.assertIn('audio yo‘q', output)
+
+
+@override_settings(MEDIA_ROOT=MEDIA, AI_ENABLED=True, GEMINI_API_KEY='k')
+class DuplicateScopeTests(TestCase):
+    """--duplicate across a whole section published three exams in one go."""
+
+    def published(self, title):
+        exam = Exam.objects.create(title=title, section='Listening', duration_seconds=900,
+                                   passage='word ' * 145, audio_url='https://example.com/a.mp3')
+        Question.objects.create(exam=exam, position=1, prompt='Q', accepted_answers=['yes'])
+        exam.published = True
+        exam.save()
+        return exam
+
+    def run_command(self, **kwargs):
+        out = io.StringIO()
+        kwargs.setdefault('delay', 0)
+        call_command('generate_audio', stdout=out, stderr=out, **kwargs)
+        return out.getvalue()
+
+    def test_duplicating_a_whole_section_needs_saying_so(self):
+        self.published('one')
+        self.published('two')
+        with patch('exams.management.commands.generate_audio.speak') as spoke:
+            with self.assertRaises(CommandError) as caught:
+                self.run_command(section='Listening', duplicate=True)
+        spoke.assert_not_called()
+        self.assertIn('--exam', str(caught.exception))
+        self.assertIn('--all', str(caught.exception))
+        self.assertEqual(Exam.objects.count(), 2, 'nothing may be copied by the refusal')
+
+    def test_naming_one_exam_is_enough(self):
+        target = self.published('one')
+        self.published('two')
+        with patch('exams.management.commands.generate_audio.speak', return_value=b'RIFF' + b'\0' * 50000), \
+                patch('exams.management.commands.generate_audio.compress',
+                      side_effect=lambda data: (data, 'wav')), \
+                patch('exams.management.commands.generate_audio.retime',
+                      return_value=(b'ID3' + b'x' * 2000, 'mp3')), \
+                patch('exams.management.commands.generate_audio.duration', return_value=60.0):
+            self.run_command(exam=target.id, duplicate=True)
+        self.assertEqual(Exam.objects.filter(published=False).count(), 1)
+        self.assertEqual(Exam.objects.get(published=False).title, 'one')
+
+
+@override_settings(MEDIA_ROOT=MEDIA, AI_ENABLED=False, GEMINI_API_KEY='')
+class RetimeWithoutAKeyTests(TestCase):
+    """Correcting existing audio is the one thing left when the quota is gone."""
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def test_retime_runs_with_no_key_at_all(self):
+        exam = Exam.objects.create(title='L', section='Listening', duration_seconds=900,
+                                   passage=' '.join(['word'] * 187))
+        Question.objects.create(exam=exam, position=1, prompt='Q', accepted_answers=['yes'])
+        exam.audio_file.save('existing.mp3', ContentFile(b'ID3' + b'x' * 4000), save=True)
+        out = io.StringIO()
+        with patch('exams.management.commands.generate_audio.duration',
+                   side_effect=[60.0, 60 * 187 / 145]), \
+                patch('exams.management.commands.generate_audio.retime',
+                      return_value=(b'ID3fixed' + b'x' * 2000, 'mp3')):
+            call_command('generate_audio', stdout=out, stderr=out, retime=True, delay=0)
+        self.assertIn('tezlik to‘g‘rilandi', out.getvalue())
+
+    def test_generating_still_requires_a_key(self):
+        with self.assertRaises(CommandError):
+            call_command('generate_audio', stdout=io.StringIO(), stderr=io.StringIO(), delay=0)

@@ -163,3 +163,67 @@ def compress(wav, kbps=64):
     if not data.startswith((b'ID3', b'\xff\xfb', b'\xff\xf3', b'\xff\xf2')) or not 0 < len(data) < len(wav):
         return wav, 'wav'
     return data, 'mp3'
+
+
+def duration(data, extension):
+    """Length in seconds of an encoded recording, or None if it cannot be read."""
+    if not shutil.which('ffprobe'):
+        return None
+    with tempfile.TemporaryDirectory() as folder:
+        path = f'{folder}/audio.{extension}'
+        with open(path, 'wb') as handle:
+            handle.write(data)
+        try:
+            found = subprocess.run(
+                ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+                 '-of', 'default=noprint_wrappers=1:nokey=1', path],
+                check=True, capture_output=True, timeout=120)
+            return float(found.stdout.strip())
+        except (subprocess.SubprocessError, OSError, ValueError):
+            return None
+
+
+def _tempo_chain(factor):
+    """atempo only accepts 0.5-2.0 per stage, so extreme factors are chained."""
+    stages = []
+    remaining = factor
+    while remaining < 0.5:
+        stages.append(0.5)
+        remaining /= 0.5
+    while remaining > 2.0:
+        stages.append(2.0)
+        remaining /= 2.0
+    stages.append(remaining)
+    return ','.join(f'atempo={stage:.6f}' for stage in stages)
+
+
+def retime(data, extension, factor, kbps=64):
+    """Re-speak the SAME recording faster or slower, keeping the pitch.
+
+    Asking a speech model for a pace is unreliable -- the same instruction
+    produced 66 words a minute one day and 187 the next. Measuring what came
+    back and correcting it here is exact, and costs no provider request, which
+    matters most when the free quota is the binding constraint.
+
+    Returns (bytes, extension), unchanged when the correction cannot be made.
+    """
+    if not 0.2 <= factor <= 5 or abs(factor - 1) < 0.01 or not shutil.which('ffmpeg'):
+        return data, extension
+    with tempfile.TemporaryDirectory() as folder:
+        source = f'{folder}/in.{extension}'
+        target = f'{folder}/out.mp3'
+        with open(source, 'wb') as handle:
+            handle.write(data)
+        try:
+            subprocess.run(
+                ['ffmpeg', '-nostdin', '-loglevel', 'error', '-y', '-i', source,
+                 '-filter:a', _tempo_chain(factor), '-ac', '1',
+                 '-codec:a', 'libmp3lame', '-b:a', f'{int(kbps)}k', target],
+                check=True, capture_output=True, timeout=900)
+            with open(target, 'rb') as handle:
+                result = handle.read()
+        except (subprocess.SubprocessError, OSError):
+            return data, extension
+    if not result.startswith((b'ID3', b'\xff\xfb', b'\xff\xf3', b'\xff\xf2')) or len(result) < 1024:
+        return data, extension
+    return result, 'mp3'
