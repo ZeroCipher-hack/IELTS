@@ -918,3 +918,38 @@ class RetimeWithoutAKeyTests(TestCase):
     def test_generating_still_requires_a_key(self):
         with self.assertRaises(CommandError):
             call_command('generate_audio', stdout=io.StringIO(), stderr=io.StringIO(), delay=0)
+
+
+@override_settings(MEDIA_ROOT=MEDIA, AI_ENABLED=True, GEMINI_API_KEY='k')
+class PublishedExamGuidanceTests(TestCase):
+    """Refusing to touch a live exam must say what to do instead."""
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(MEDIA, ignore_errors=True)
+        super().tearDownClass()
+
+    def live(self):
+        exam = Exam.objects.create(title='L', section='Listening', duration_seconds=900,
+                                   passage=' '.join(['word'] * 187))
+        Question.objects.create(exam=exam, position=1, prompt='Q', accepted_answers=['yes'])
+        exam.audio_file.save('live.mp3', ContentFile(b'ID3' + b'x' * 4000), save=True)
+        exam.published = True
+        exam.save()
+        return exam
+
+    def test_the_refusal_names_the_command_that_works(self):
+        exam = self.live()
+        out = io.StringIO()
+        call_command('generate_audio', stdout=out, stderr=out, exam=exam.id, retime=True, delay=0)
+        output = out.getvalue()
+        self.assertIn('nashr qilingan', output)
+        self.assertIn(f'--exam {exam.id} --duplicate --retime --publish', output)
+
+    def test_the_suggestion_matches_the_mode_the_operator_asked_for(self):
+        exam = self.live()
+        out = io.StringIO()
+        with patch('exams.management.commands.generate_audio.speak'):
+            call_command('generate_audio', stdout=out, stderr=out, exam=exam.id, delay=0)
+        self.assertIn(f'--exam {exam.id} --duplicate --publish', out.getvalue())
+        self.assertNotIn('--retime', out.getvalue())

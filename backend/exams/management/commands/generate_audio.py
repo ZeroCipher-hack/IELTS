@@ -144,8 +144,13 @@ class Command(BaseCommand):
             if self.exhausted:
                 break
             if exam.published:
+                # Naming the problem without naming the remedy just stops the
+                # operator; the remedy is one flag away.
+                flags = '--duplicate' + (' --retime' if options['retime'] else '')
                 self.stdout.write(self.style.ERROR(
-                    f'#{exam.id} «{exam.title}» nashr qilingan — o‘zgartirilmaydi.'))
+                    f'#{exam.id} «{exam.title}» nashr qilingan — o‘zgartirilmaydi.\n'
+                    f'   Yangi versiya yarating:\n'
+                    f'     manage.py generate_audio --exam {exam.id} {flags} --publish'))
                 continue
             self.stdout.write(f'\n#{exam.id} {exam.section} — {exam.title}')
             self.unusable = False
