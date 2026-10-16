@@ -15,6 +15,7 @@ type Ctx = {
   history: Attempt[];
   free: boolean;
   openAccess: boolean;
+  aiReady: boolean;
   catalogLoading: boolean;
   historyLoading: boolean;
   t: (typeof copy)['uz'];
@@ -52,6 +53,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
   const [history, setHistory] = useState<Attempt[]>([]);
   const [free, setFree] = useState(false);
   const [openAccess, setOpenAccess] = useState(false);
+  const [aiReady, setAiReady] = useState(false);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(true);
 
@@ -65,11 +67,12 @@ export function ProductProvider({ children }: { children: ReactNode }) {
       setHistoryLoading(true);
     }
     const outcomes = await Promise.allSettled([
-      api<{ exams: Exam[]; free_attempt_available: boolean; open_access: boolean }>('catalog/')
+      api<{ exams: Exam[]; free_attempt_available: boolean; open_access: boolean; ai_ready?: boolean }>('catalog/')
         .then((cat) => {
           setExams(cat.exams);
           setFree(cat.free_attempt_available);
           setOpenAccess(cat.open_access);
+          setAiReady(cat.ai_ready === true);
         })
         .finally(() => setCatalogLoading(false)),
       api<{ attempts: Attempt[] }>('attempts/')
@@ -167,7 +170,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
 
   const value: Ctx = {
     user, language, ready, available, busy, error, notice,
-    exams, history, free, openAccess, catalogLoading, historyLoading,
+    exams, history, free, openAccess, aiReady, catalogLoading, historyLoading,
     t, say, displayName,
     setLanguage, setError, setNotice, setUser,
     connect, load, run, logout, uploadAvatar, authenticate,

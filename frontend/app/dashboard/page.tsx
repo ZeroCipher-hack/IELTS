@@ -68,7 +68,11 @@ export default function DashboardPage() {
               <span className="skill-icon"><Icon size={24} /></span>
               <h3>{name}</h3>
               <p>{detail}</p>
-              <strong>{a ? (a.result!.assessment ? `${a.result!.band} AI band` : `${a.result!.correct} / ${a.result!.total}`) : '—'}</strong>
+              {/* A score only renders when there IS one; an empty state must not be
+                  the loudest thing on the card. */}
+              {a
+                ? <strong>{a.result!.assessment ? `${a.result!.band} AI band` : `${a.result!.correct} / ${a.result!.total}`}</strong>
+                : <span className="skill-empty">{say('Hali topshirilmagan', 'Not attempted yet', 'Ещё не пройден')}</span>}
               <span className="skill-cta">{t.open}<ArrowRight size={18} /></span>
             </Link>
           );

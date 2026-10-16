@@ -4,6 +4,11 @@
         root * /srv/static
         file_server
     }
+    # Uploaded exam audio. Django does not serve media outside DEBUG, so the proxy does.
+    handle_path /media/* {
+        root * /srv/media
+        file_server
+    }
     @django path /api/* /admin /admin/*
     handle @django {
         reverse_proxy backend:8000

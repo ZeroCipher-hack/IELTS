@@ -15,6 +15,23 @@ GEMINI_WRITING_MODEL=gemini-2.5-flash
 GEMINI_LIVE_MODEL=gemini-3.1-flash-live-preview
 ```
 
+## Verify the key before anything else
+
+```bash
+cd backend
+.venv/bin/python manage.py ai_check
+```
+
+Three stages, in order, each one failing loudly instead of silently:
+
+1. local configuration (`AI_ENABLED`, whether a key is present, which model is configured);
+2. the key itself, by listing the models Google will serve it — this is also where a wrong `GEMINI_WRITING_MODEL` is caught, and the usable alternatives are printed;
+3. one real `generateContent` call with a JSON response schema, the same mechanism Writing assessment relies on.
+
+The command prints the HTTP status and Google's own status enum (`PERMISSION_DENIED`, `RESOURCE_EXHAUSTED`, …) with an explanation of the usual cause. It never prints the key, and it never echoes Google's prose error message, because that message quotes the rejected key back. `--offline` checks the local configuration only.
+
+Request handling is deliberately less talkative: `exams.gemini.post` collapses every provider failure into `AI_PROVIDER_ERROR` so nothing leaks into application logs. Diagnose with `ai_check`, not by reading request logs.
+
 Django does not automatically load .env for local commands: export variables in your shell or use your deployment secret manager. Never use NEXT_PUBLIC_ for a provider secret. Rotate keys that were shared in chat or public repositories.
 
 Run migrations, then restart the backend and start the worker:

@@ -10,8 +10,20 @@ def validate_exam(exam):
     if not 60 <= exam.duration_seconds <= 14400: errors.append('Davomiylik 60–14400 soniya bo‘lsin.')
     if not questions: errors.append('Kamida bitta topshiriq kiriting.')
     if exam.section=='Reading' and not exam.passage.strip(): errors.append('Reading matni kerak.')
-    if exam.section=='Listening' and not exam.audio_url.startswith('https://'): errors.append('Listening uchun HTTPS audio havolasi kerak.')
+    if exam.section=='Listening' and not (exam.audio_file or exam.audio_url.startswith('https://')): errors.append('Listening uchun audio fayl yuklang yoki HTTPS havolasi qo‘ying.')
     if exam.section=='Writing' and len(questions)>2: errors.append('Writing uchun ko‘pi bilan ikkita topshiriq kiriting.')
+    if exam.section=='Speaking':
+        # A Speaking exam is an interlocutor frame, not a chat: it needs all three
+        # parts, and exactly one Part 2 cue card with its bullet points.
+        parts={}
+        for q in questions: parts.setdefault(q.part,[]).append(q)
+        for number,label in ((1,'Part 1'),(3,'Part 3')):
+            if not parts.get(number): errors.append(f'Speaking uchun kamida bitta {label} savoli kerak.')
+        cue=parts.get(2,[])
+        if len(cue)!=1: errors.append('Speaking uchun aynan bitta Part 2 cue card kerak.')
+        elif not [c for c in cue[0].choices if isinstance(c,str) and c.strip()]:
+            errors.append('Part 2 cue card uchun kamida bitta band (variantlar maydoniga) kiriting.')
+        if parts.get(0): errors.append('Speaking savollarining har birida qism (1, 2 yoki 3) belgilansin.')
     for q in questions:
         if not q.prompt.strip(): errors.append(f'{q.position}: savol matni kerak.')
         if not isinstance(q.choices,list) or any(not isinstance(c,str) or not c.strip() for c in q.choices):
@@ -25,6 +37,30 @@ def validate_exam(exam):
 
 
 def normal(value): return ' '.join(value.strip().casefold().split())
+
+
+def duplicate_exam(exam):
+    """Return an unsaved-to-the-caller draft copy of `exam`, questions included.
+
+    A published exam is immutable, so every correction and every added
+    recording goes through a new version. Uploaded files are referenced by
+    name, not re-uploaded: the copy points at the same stored audio until it
+    is given its own.
+    """
+    from django.db import transaction
+    from .models import Exam
+    with transaction.atomic():
+        source = Exam.objects.get(pk=exam.pk)
+        questions = list(source.questions.all())
+        source.pk = None
+        source.published = False
+        source.version += 1
+        source.save()
+        for question in questions:
+            question.pk = None
+            question.exam = source
+            question.save()
+    return source
 
 
 def finish_attempt(a):

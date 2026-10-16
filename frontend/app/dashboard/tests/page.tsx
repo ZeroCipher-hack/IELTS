@@ -16,7 +16,7 @@ const sections = [
 export default function TestsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t, say, exams, free, openAccess, history, catalogLoading, busy } = useProduct();
+  const { t, say, exams, free, openAccess, aiReady, history, catalogLoading, busy } = useProduct();
   const [sectionFilter, setSectionFilter] = useState(searchParams.get('section') || 'All');
 
   if (catalogLoading) return <LoadingSkeleton label={t.loading} view="tests" />;
@@ -26,7 +26,10 @@ export default function TestsPage() {
       router.push(`/dashboard/payments?exam=${encodeURIComponent(exam.title)}`);
       return;
     }
-    if (exam.section === 'Writing' && !window.confirm(t.writingNotice)) return;
+    // Warn only when assessment really is unreachable. Asking every candidate
+    // to confirm a connected service trains them to dismiss the dialog unread.
+    if (!aiReady && (exam.section === 'Writing' || exam.section === 'Speaking')
+        && !window.confirm(t.writingNotice)) return;
     router.push(`/dashboard/tests/${exam.id}`);
   }
 
@@ -47,8 +50,15 @@ export default function TestsPage() {
             <span className="badge"><Sparkles size={14} /> {say('SINOV REJIMI', 'TEST MODE', 'РЕЖИМ ТЕСТИРОВАНИЯ')}</span>
             <h2>{t.fullExam}</h2>
             <p>Listening · Reading · Writing · Speaking</p>
-            <p className="availability-note">{say('To‘liq imtihon oqimi hali tayyor emas. Hozir nashr qilingan bo‘lim testlarini alohida topshirib ko‘ring.', 'The full-exam flow is not ready yet. For now, try the published section tests individually.', 'Полный экзамен ещё не готов. Пока пройдите опубликованные тесты по разделам отдельно.')}</p>
+            <p className="availability-note">
+              {say('To‘rtta bo‘lim ketma-ket topshiriladi. Har bir bo‘limdan nashr qilingan eng yangi test olinadi.',
+                'Four sections taken in order, each using the newest published paper for that section.',
+                'Четыре раздела по порядку, в каждом — новейший опубликованный тест.')}
+            </p>
           </div>
+          <Link className="primary" href="/dashboard/full">
+            <ArrowRight size={18} />{say('To‘liq imtihonni boshlash', 'Start the full exam', 'Начать полный экзамен')}
+          </Link>
         </section>
       ) : (
         <section className="full-test premium-exam">
@@ -80,16 +90,16 @@ export default function TestsPage() {
             const entries = exams.filter((e) => e.section === name);
             if (entries.length) {
               return entries.map((exam) => {
-                const locked = (!openAccess && !free && !exam.has_access) || name === 'Speaking';
+                const locked = !openAccess && !free && !exam.has_access;
                 return (
                   <section className={'panel exam-card skill-' + name.toLowerCase()} key={exam.id}>
                     <div className="exam-card-top">
                       <span className="skill-icon"><Icon size={24} /></span>
                       <span className="access-badge">
-                        {openAccess && name !== 'Speaking' ? (
+                        {openAccess ? (
                           say('Sinov uchun ochiq', 'Open for testing', 'Открыто для тестирования')
                         ) : locked ? (
-                          <><LockKeyhole size={13} />{name === 'Speaking' ? say('Ovozli mashq', 'Voice practice', 'Голосовая практика') : say('Pullik', 'Paid', 'Платно')}</>
+                          <><LockKeyhole size={13} />{say('Pullik', 'Paid', 'Платно')}</>
                         ) : free ? t.free : say('Kirish mavjud', 'Access granted', 'Доступ открыт')}
                       </span>
                     </div>
@@ -97,18 +107,24 @@ export default function TestsPage() {
                     <h2>{exam.title}</h2>
                     {name === 'Speaking' && (
                       <p className="availability-note">
-                        {say('Ovozli imtihon tayyorlanmoqda. Ochilish sanasi hali belgilanmagan.', 'The voice exam is in development. A launch date has not been set.', 'Голосовой экзамен в разработке. Дата запуска ещё не определена.')}
+                        {say('Ssenariyli suhbat: Part 1, cue card va Part 3. Mikrofon kerak bo‘ladi.', 'A scripted interview: Part 1, a cue card and Part 3. A microphone is required.', 'Структурированное интервью: Part 1, карточка и Part 3. Нужен микрофон.')}
                       </p>
                     )}
                     <p>{exam.question_count} {t.questions} · {Math.round(exam.duration_seconds / 60)} {t.minutes}</p>
                     <button
                       className={locked ? 'secondary' : 'primary'}
                       disabled={busy}
-                      onClick={() => (name === 'Speaking' ? router.push('/dashboard/speaking') : void start(exam))}
+                      onClick={() => void start(exam)}
                     >
                       {locked ? <LockKeyhole size={16} /> : <ArrowRight size={16} />}{' '}
-                      {name === 'Speaking' ? say('Ovozli mashq', 'Voice practice', 'Голосовая практика') : locked ? say('Mavjudlik holati', 'Availability details', 'Статус доступа') : t.start}
+                      {locked ? say('Mavjudlik holati', 'Availability details', 'Статус доступа') : t.start}
                     </button>
+                    {name === 'Speaking' && !locked && (
+                      <Link className="text-button" href="/dashboard/speaking">
+                        {say('Yoki erkin ovozli mashq', 'Or free voice practice', 'Или свободная голосовая практика')}
+                        <ArrowRight size={16} />
+                      </Link>
+                    )}
                   </section>
                 );
               });

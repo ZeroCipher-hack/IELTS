@@ -19,10 +19,18 @@ WSGI_APPLICATION='config.wsgi.application'
 if os.getenv('POSTGRES_HOST'):
     DATABASES={'default':{'ENGINE':'django.db.backends.postgresql','NAME':os.getenv('POSTGRES_DB','ieltsqa'),'USER':os.getenv('POSTGRES_USER','ieltsqa'),'PASSWORD':os.environ['POSTGRES_PASSWORD'],'HOST':os.environ['POSTGRES_HOST'],'PORT':os.getenv('POSTGRES_PORT','5432')}}
 else:
-    DATABASES={'default':{'ENGINE':'django.db.backends.sqlite3','NAME':BASE_DIR/'db.sqlite3','OPTIONS':{'timeout':20}}}
+    # WAL lets readers run while one writer holds the lock; without it concurrent
+    # browser requests on the dev server hit "database is locked". Production uses
+    # PostgreSQL, so this only affects local development.
+    DATABASES={'default':{'ENGINE':'django.db.backends.sqlite3','NAME':BASE_DIR/'db.sqlite3',
+        'OPTIONS':{'timeout':20,'init_command':'PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;'}}}
 AUTH_PASSWORD_VALIDATORS=[{'NAME':'django.contrib.auth.password_validation.MinimumLengthValidator','OPTIONS':{'min_length':10}},{'NAME':'django.contrib.auth.password_validation.CommonPasswordValidator'},{'NAME':'django.contrib.auth.password_validation.NumericPasswordValidator'}]
 LANGUAGE_CODE='uz';TIME_ZONE='UTC';USE_I18N=True;USE_TZ=True
 STATIC_URL='static/';STATIC_ROOT=BASE_DIR/'staticfiles';DEFAULT_AUTO_FIELD='django.db.models.BigAutoField'
+# Uploaded exam audio. Served by Django in DEBUG and by the reverse proxy in production.
+MEDIA_URL='/media/';MEDIA_ROOT=Path(os.getenv('DJANGO_MEDIA_ROOT',BASE_DIR/'media'))
+EXAM_AUDIO_MAX_BYTES=int(os.getenv('EXAM_AUDIO_MAX_BYTES',str(40*1024*1024)))
+EXAM_AUDIO_EXTENSIONS=['mp3','m4a','aac','ogg','oga','opus','wav','webm']
 CSRF_TRUSTED_ORIGINS=os.getenv('CSRF_TRUSTED_ORIGINS','http://localhost:3000,http://127.0.0.1:3000').split(',')
 SESSION_COOKIE_HTTPONLY=True
 SESSION_COOKIE_SECURE=not DEBUG
@@ -40,6 +48,7 @@ AI_ENABLED=os.getenv('AI_ENABLED','0')=='1'
 GEMINI_API_KEY=os.getenv('GEMINI_API_KEY','')
 GEMINI_WRITING_MODEL=os.getenv('GEMINI_WRITING_MODEL','gemini-2.5-flash')
 GEMINI_LIVE_MODEL=os.getenv('GEMINI_LIVE_MODEL','gemini-3.1-flash-live-preview')
+GEMINI_TTS_MODEL=os.getenv('GEMINI_TTS_MODEL','gemini-2.5-flash-preview-tts')
 
 VOICE_PRACTICE_ENABLED=os.getenv('VOICE_PRACTICE_ENABLED','0')=='1'
 # Opens every published exam only when explicitly enabled for local testing.

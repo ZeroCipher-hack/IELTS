@@ -14,7 +14,7 @@ IELTS Academic mock examination platform. Repository: ZeroCipher-hack/IELTS.
 - Frontend account portal: register/login, start/resume, save answers, submit and reopen results when backend is connected.
 
 ## Not ready for paid launch
-Full-length validated IELTS content, AI Writing/Speaking grading, live voice interviewer, actual payments, phone verification, full UZ/EN/RU localization and 50-session load verification are not implemented. No fake AI grades or payment-success responses are returned. The five-question demo returns a raw score, not an IELTS band. The public hosted demo currently has no Django backend attached; its account portal reports this clearly.
+Full-length validated IELTS content, AI Writing/Speaking grading (needs a Gemini key), live voice interviewer, actual payments, phone verification, full UZ/EN/RU localization and 50-session load verification are not implemented. Speaking runs as a scripted interview from a question bank; the free-conversation pilot at /dashboard/speaking is a separate, flag-gated feature. No fake AI grades or payment-success responses are returned. The five-question demo returns a raw score, not an IELTS band. The public hosted demo currently has no Django backend attached; its account portal reports this clearly.
 
 ## Local setup
 Requires Python 3.11+ and Node.js 22.13+, with pnpm installed.
@@ -53,5 +53,8 @@ pnpm build
 - frontend/: Next.js + TypeScript, no Sites account dependency.
 - backend/: Django API, admin, models, migrations, seed command and tests.
 - docs/: architecture, design and integration checklist.
+
+## Test va savol qo‘shish
+Admin panel orqali test qo‘shish, Listening audiosini yuklash va JSON import qilish bo‘yicha qadamba-qadam qo‘llanma: [docs/SAVOL_QOSHISH.md](docs/SAVOL_QOSHISH.md).
 
 Only original demonstration content belongs in this public repository. Do not commit real user records, paid answer keys, credentials or database files.
