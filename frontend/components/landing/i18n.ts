@@ -25,9 +25,8 @@ type Dict = {
   };
   why: { title: string; items: { title: string; text: string }[] };
   status: { badge: string; title: string; text: string };
-  proof: { title: string; subtitle: string; placeholder: string };
   finalCta: { title: string; text: string; button: string };
-  footer: { tagline: string; contact: string; privacy: string; terms: string; rights: string };
+  footer: { tagline: string; rights: string };
 };
 
 export const t: Record<Lang, Dict> = {
@@ -97,11 +96,6 @@ export const t: Record<Lang, Dict> = {
       title: "Hozirgi holat",
       text: "Bu hozircha pullik mahsulot emas — birinchi urinish bepul, keyingi kirish administrator orqali beriladi. To'lov tizimi tez orada ishga tushadi.",
     },
-    proof: {
-      title: "Talabalar fikri",
-      subtitle: "Bu joy haqiqiy fikrlar bilan to'ldiriladi.",
-      placeholder: "Sharh uchun joy — keyinroq to'ldiriladi.",
-    },
     finalCta: {
       title: "IELTS'ga bugun tayyorlanishni boshlang",
       text: "Bitta bepul urinish bilan darajangizni bilib oling.",
@@ -109,9 +103,6 @@ export const t: Record<Lang, Dict> = {
     },
     footer: {
       tagline: "IELTS Academic mock imtihonlari — o'zbek talabalari uchun.",
-      contact: "Bog'lanish",
-      privacy: "Maxfiylik",
-      terms: "Foydalanish shartlari",
       rights: "Barcha huquqlar himoyalangan.",
     },
   },
@@ -181,11 +172,6 @@ export const t: Record<Lang, Dict> = {
       title: "Where we are today",
       text: "This is not a paid product yet — the first attempt is free and further access is granted by an administrator. Payments are coming soon.",
     },
-    proof: {
-      title: "Student feedback",
-      subtitle: "Real feedback will be added here.",
-      placeholder: "Placeholder for a review — to be filled in later.",
-    },
     finalCta: {
       title: "Start preparing for IELTS today",
       text: "Find out your level with one free attempt.",
@@ -193,9 +179,6 @@ export const t: Record<Lang, Dict> = {
     },
     footer: {
       tagline: "IELTS Academic mock exams for Uzbek students.",
-      contact: "Contact",
-      privacy: "Privacy",
-      terms: "Terms of use",
       rights: "All rights reserved.",
     },
   },
@@ -265,11 +248,6 @@ export const t: Record<Lang, Dict> = {
       title: "Текущий статус",
       text: "Это пока не платный продукт — первая попытка бесплатна, дальнейший доступ выдаёт администратор. Оплата появится скоро.",
     },
-    proof: {
-      title: "Отзывы студентов",
-      subtitle: "Здесь появятся настоящие отзывы.",
-      placeholder: "Место для отзыва — заполним позже.",
-    },
     finalCta: {
       title: "Начните подготовку к IELTS сегодня",
       text: "Узнайте свой уровень за одну бесплатную попытку.",
@@ -277,9 +255,6 @@ export const t: Record<Lang, Dict> = {
     },
     footer: {
       tagline: "Пробные экзамены IELTS Academic для студентов Узбекистана.",
-      contact: "Контакты",
-      privacy: "Конфиденциальность",
-      terms: "Условия использования",
       rights: "Все права защищены.",
     },
   },

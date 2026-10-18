@@ -17,7 +17,7 @@ Thirteen Django tests cover authentication/CSRF, cross-user isolation, hidden an
 
 ## September 12 product update
 
-The main route now renders real authenticated data in UZ/EN/RU; the old sample UI is at `/design`. Writing collection is enabled with explicit acknowledgement that assessment is pending. Reading/Listening produce evidence rows and a rule-based weekly plan. Next-to-Django HTTP registration, CSRF, catalog, save, submit, history, profile and logout were exercised successfully after fixing rewrite trailing slashes. Browser verification could not run because Chromium download was blocked; Docker deployment and load tests are not yet verified. See DEPLOYMENT.md for exact setup and remaining launch gates.
+The main route now renders real authenticated data in UZ/EN/RU. Writing collection is enabled with explicit acknowledgement that assessment is pending. Reading/Listening produce evidence rows and a rule-based weekly plan. Next-to-Django HTTP registration, CSRF, catalog, save, submit, history, profile and logout were exercised successfully after fixing rewrite trailing slashes. Browser verification could not run because Chromium download was blocked; Docker deployment and load tests are not yet verified. See DEPLOYMENT.md for exact setup and remaining launch gates.
 
 ## Gemini pilot implementation
 

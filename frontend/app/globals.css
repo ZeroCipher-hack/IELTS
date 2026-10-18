@@ -1,6 +1,5 @@
 /* frontend/app/globals.css — TO'LIQ FAYL */
 @import "tailwindcss";
-@import "tw-animate-css";
 @theme inline { --color-navy: var(--navy); --color-navy-foreground: var(--navy-foreground); }
 .landing-page {  --radius: 1.5rem;
   --font-sans:
