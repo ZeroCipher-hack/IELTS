@@ -1,6 +1,6 @@
 # Server setup
 
-The primary frontend now uses real Django accounts and data. `/design` preserves the earlier explicitly labelled mockup. No AI or payment credentials are needed for Reading/Listening or collecting Writing responses. A paid public launch is NOT yet ready.
+The primary frontend now uses real Django accounts and data. No AI or payment credentials are needed for Reading/Listening or collecting Writing responses. A paid public launch is NOT yet ready.
 
 ## Local
 
